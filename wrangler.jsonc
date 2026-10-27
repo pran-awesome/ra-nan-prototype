@@ -1,0 +1,8 @@
+{
+  // หน้าเว็บ static บน Cloudflare Workers (static assets) ไม่มีโค้ดฝั่ง server
+  "name": "ra-nan-web",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" },
+  // ลิงก์ preview ของแต่ละ PR (pr-<เลข>-ra-nan-web.<account>.workers.dev) สร้างโดย GitHub Actions
+  "preview_urls": true
+}

@@ -1,0 +1,25 @@
+name = "ra-nan-line-webhook"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+# deploy แล้วไม่ลบตัวแปรที่ตั้งไว้ใน dashboard (secret ไม่ถูกลบอยู่แล้ว)
+keep_vars = true
+
+# R2 bucket ที่สร้างไว้แล้ว
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "ra-nan"
+
+[vars]
+# โดเมนสาธารณะของ R2 (r2.dev หรือ custom domain) ไม่มี / ปิดท้าย
+PUBLIC_DOMAIN = "https://pub-6f83b398e7e54e8889c29fb8e5175f06.r2.dev"
+SUPABASE_URL = "https://lwcjdfjycaoypcrieggj.supabase.co"
+# เพดานพื้นที่รูป (GB) เกินแล้วบอทจะไม่รับรูปใหม่
+STORAGE_LIMIT_GB = "8"
+
+# ค่าลับ ห้ามใส่ในไฟล์นี้ ให้ตั้งด้วย:
+#   npx wrangler secret put LINE_CHANNEL_SECRET
+#   npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+
+[observability]
+enabled = true

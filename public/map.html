@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>แผนที่ชุมชน · บ้านสบปืน</title>
+  <meta name="description" content="แผนที่ดาวเทียมแปลงที่ดินและรูปเล่าเรื่องจากชาวบ้านสบปืน">
+  <meta name="theme-color" content="#14231a">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2314231a'/><text x='32' y='45' font-size='36' text-anchor='middle' fill='%23e8c547' font-family='serif'>ส</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Serif+Thai:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="page-map">
+  <header class="site-nav solid"></header>
+
+  <main class="explorer">
+    <aside class="panel" id="panel" data-state="peek">
+      <button class="panel-grip" id="panel-grip" aria-label="ขยายหรือย่อรายการ"><span></span></button>
+
+      <div class="panel-view" id="list-view">
+        <div class="panel-head">
+          <p class="kicker" id="area-name">กำลังโหลด…</p>
+          <h1 class="panel-title">แปลงในชุมชน</h1>
+          <p class="panel-sub" id="summary"></p>
+          <label class="search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <input id="q" type="search" placeholder="ค้นหาชื่อแปลง รหัส หรือชื่อชาวบ้าน" autocomplete="off">
+          </label>
+          <div class="chips" id="use-chips" role="group" aria-label="กรองตามการใช้ที่ดิน"></div>
+          <div class="sort-row">
+            <span id="result-count"></span>
+            <select id="sort" aria-label="เรียงลำดับ">
+              <option value="recent">รูปล่าสุดก่อน</option>
+              <option value="photos">รูปมากที่สุด</option>
+              <option value="size">แปลงใหญ่ที่สุด</option>
+              <option value="name">ชื่อ ก-ฮ</option>
+            </select>
+          </div>
+        </div>
+        <ul class="plot-list" id="plot-list"></ul>
+      </div>
+
+      <div class="panel-view" id="detail-view" hidden>
+        <button class="back" id="back">← แปลงทั้งหมด</button>
+        <div id="detail"></div>
+      </div>
+    </aside>
+
+    <section class="map-stage">
+      <div id="map"></div>
+      <div class="map-tools">
+        <button class="tool" id="toggle-3d" aria-pressed="false" title="มุมมอง 3 มิติ">3D</button>
+        <button class="tool" id="fit-area" title="ดูทั้งชุมชน">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="config.js"></script>
+  <script src="assets/core.js"></script>
+  <script src="assets/map.js"></script>
+</body>
+</html>

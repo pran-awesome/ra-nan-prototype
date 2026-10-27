@@ -1,0 +1,4 @@
+# คัดลอกเป็น .dev.vars สำหรับรัน wrangler dev บนเครื่อง (ห้าม commit ไฟล์ .dev.vars)
+LINE_CHANNEL_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
+SUPABASE_SERVICE_ROLE_KEY=

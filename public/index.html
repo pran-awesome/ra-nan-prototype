@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>บ้านสบปืน · แผนที่เรื่องเล่าของชุมชน</title>
+  <meta name="description" content="แผนที่ดาวเทียมของชุมชนบ้านสบปืน อ.เฉลิมพระเกียรติ จ.น่าน แปลงที่ดิน ผู้คน และรูปเล่าเรื่องที่ชาวบ้านส่งมาเองผ่าน LINE">
+  <meta name="theme-color" content="#14231a">
+  <meta property="og:title" content="บ้านสบปืน · แผนที่เรื่องเล่าของชุมชน">
+  <meta property="og:description" content="แปลงที่ดิน ผู้คน และรูปเล่าเรื่องจากชาวบ้าน บนแผนที่ดาวเทียมเดียว">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2314231a'/><text x='32' y='45' font-size='36' text-anchor='middle' fill='%23e8c547' font-family='serif'>ส</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Serif+Thai:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="page-home">
+  <header class="site-nav on-dark"></header>
+
+  <section class="hero" aria-label="บ้านสบปืน">
+    <div id="hero-map" class="hero-map" aria-hidden="true"></div>
+    <div class="hero-shade"></div>
+    <div class="hero-content">
+      <p class="eyebrow"><span class="pulse"></span><span id="hero-place">อ.เฉลิมพระเกียรติ จ.น่าน</span></p>
+      <h1 class="hero-title"><span class="reveal">เรื่องเล่า</span><span class="reveal d1">ของ<em id="hero-name">บ้านสบปืน</em></span></h1>
+      <p class="hero-lead reveal d2">ทุกแปลงนา ทุกสวน ทุกบ่อปลา และทุกภาพที่ชาวบ้านถ่ายเองจากมือถือ<br class="hide-sm"> วางอยู่บนแผนที่ดาวเทียมผืนเดียว ให้ใครก็มาเดินเที่ยวหมู่บ้านได้</p>
+      <div class="hero-cta reveal d3">
+        <a class="btn btn-primary" data-link="map.html">สำรวจแผนที่ <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" data-link="stories.html">อ่านเรื่องเล่า</a>
+      </div>
+    </div>
+    <div class="hero-stats reveal d4" id="hero-stats">
+      <div class="stat"><b data-count="plots">–</b><span>แปลงที่ดิน</span></div>
+      <div class="stat"><b data-count="rai">–</b><span>ไร่</span></div>
+      <div class="stat"><b data-count="people">–</b><span>ชาวบ้านผู้เล่าเรื่อง</span></div>
+      <div class="stat"><b data-count="photos">–</b><span>ภาพจากชาวบ้าน</span></div>
+    </div>
+    <div class="hero-coord" id="hero-coord"></div>
+    <a class="scroll-cue" href="#land" aria-label="เลื่อนลง"><span></span></a>
+  </section>
+
+  <section class="section land" id="land">
+    <div class="wrap two-col">
+      <div>
+        <p class="kicker">ผืนดินของหมู่บ้าน</p>
+        <h2 class="section-title">ดินแต่ละผืน<br>มีเจ้าของ มีเรื่องเล่า</h2>
+        <p class="section-lead">ทีมงานชุมชนวาดขอบแปลงจริงลงบนภาพดาวเทียม แล้วผูกกับชาวบ้านที่ดูแลแปลงนั้น ภาพที่ชาวบ้านส่งมาจึงไปปักที่บ้านและไร่นาของเขาเองโดยไม่ต้องเปิด GPS</p>
+        <div id="land-breakdown" class="breakdown"></div>
+      </div>
+      <a class="land-map-card" data-link="map.html" aria-label="เปิดแผนที่ชุมชน">
+        <div id="mini-map" class="mini-map"></div>
+        <span class="mini-map-cta">เปิดแผนที่เต็มจอ →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="section stories-section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="kicker">ส่งตรงจากมือถือชาวบ้าน</p>
+          <h2 class="section-title">เรื่องเล่าล่าสุด</h2>
+        </div>
+        <a class="link-arrow" data-link="stories.html">ดูทั้งหมด →</a>
+      </div>
+      <div id="latest-stories" class="bento"></div>
+    </div>
+  </section>
+
+  <section class="section how">
+    <div class="wrap">
+      <p class="kicker center">ทำงานอย่างไร</p>
+      <h2 class="section-title center">จากกล้องมือถือ ถึงแผนที่ของทุกคน</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-no">01</span>
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="13" y="4" width="22" height="40" rx="5"/><circle cx="24" cy="21" r="6"/><path d="M20 38h8"/></svg>
+          </div>
+          <h3>ถ่ายแล้วส่งใน LINE</h3>
+          <p>ชาวบ้านส่งรูปเข้า LINE ของชุมชนได้เลย พิมพ์เล่าเพิ่มสั้น ๆ ก็ได้ ไม่ต้องติดตั้งแอปใหม่</p>
+        </li>
+        <li class="step">
+          <span class="step-no">02</span>
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><path d="M6 14l12-6 12 6 12-6v26l-12 6-12-6-12 6z"/><path d="M18 8v26M30 14v26"/></svg>
+          </div>
+          <h3>ปักลงแปลงของตัวเอง</h3>
+          <p>ระบบรู้ว่าใครดูแลแปลงไหน รูปจึงไปอยู่ที่นา สวน หรือบ้านของคนส่งโดยอัตโนมัติ</p>
+        </li>
+        <li class="step">
+          <span class="step-no">03</span>
+          <div class="step-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18"/><path d="M6 24h36M24 6c6 6 6 30 0 36M24 6c-6 6-6 30 0 36"/></svg>
+          </div>
+          <h3>ทุกคนเห็นความเปลี่ยนแปลง</h3>
+          <p>ภาพเรียงเป็นเรื่องเล่าตามเวลา เห็นข้าวออกรวง ปลาโต ป่าฟื้น จากมุมของคนในหมู่บ้านเอง</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section people" id="people-section">
+    <div class="wrap">
+      <p class="kicker center">คนสบปืน</p>
+      <h2 class="section-title center">ผู้เล่าเรื่องของหมู่บ้าน</h2>
+      <div id="people" class="people-cloud"></div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div id="cta-map" class="cta-map" aria-hidden="true"></div>
+    <div class="cta-inner">
+      <h2>มาเดินเที่ยวบ้านสบปืน<br>จากที่ไหนก็ได้</h2>
+      <a class="btn btn-primary" data-link="map.html">เปิดแผนที่ชุมชน →</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <strong id="footer-name">ชุมชนบ้านสบปืน</strong>
+        <p id="footer-sub">อ.เฉลิมพระเกียรติ จ.น่าน</p>
+      </div>
+      <p class="credits">ภาพดาวเทียม © Esri, Maxar, Earthstar Geographics · ข้อมูลความสูง © Mapzen/AWS<br>รูปและคำบรรยายเป็นของชาวบ้านผู้ส่ง</p>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="config.js"></script>
+  <script src="assets/core.js"></script>
+  <script src="assets/home.js"></script>
+</body>
+</html>

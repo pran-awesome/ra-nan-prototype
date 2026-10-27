@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>RA-NAN Admin</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- หน้า login -->
+  <main id="login-view" class="login" hidden>
+    <form id="login-form" class="card">
+      <h1>RA-NAN Admin</h1>
+      <p class="muted">สำหรับทีมงานเท่านั้น</p>
+      <label>ชื่อผู้ใช้ <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label>รหัสผ่าน <input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">เข้าสู่ระบบ</button>
+      <p class="muted"><a href="#" id="to-signup">ได้รับรหัสเชิญ? สมัครที่นี่</a></p>
+    </form>
+    <form id="signup-form" class="card" hidden>
+      <h1>สมัครด้วยรหัสเชิญ</h1>
+      <p class="muted">ใช้ชื่อผู้ใช้เดียวกับที่ owner เชิญไว้</p>
+      <label>ชื่อผู้ใช้ <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label>รหัสเชิญ <input name="token" required autocomplete="off" spellcheck="false"></label>
+      <label>ชื่อที่แสดง <input name="display_name" required></label>
+      <label>ตั้งรหัสผ่าน (อย่างน้อย 8 ตัว) <input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+      <button type="submit">สมัคร</button>
+      <p class="muted"><a href="#" id="to-login">มีบัญชีแล้ว? เข้าสู่ระบบ</a></p>
+    </form>
+    <form id="password-form" class="card" hidden>
+      <h1>ตั้งรหัสผ่านใหม่</h1>
+      <p class="muted">บัญชีนี้ยังใช้รหัสผ่านเริ่มต้นอยู่ กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งาน</p>
+      <label>รหัสผ่านใหม่ (อย่างน้อย 8 ตัว) <input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+      <label>พิมพ์อีกครั้ง <input name="confirm" type="password" minlength="8" autocomplete="new-password" required></label>
+      <button type="submit">บันทึก</button>
+    </form>
+  </main>
+
+  <!-- แอปหลัก -->
+  <div id="app" hidden>
+    <header class="top">
+      <strong>RA-NAN Admin</strong>
+      <nav id="tabs">
+        <button data-tab="plots" class="active">แปลง</button>
+        <button data-tab="villagers">ชาวบ้าน</button>
+        <button data-tab="photos">รูปที่ส่งเข้ามา <span id="pending-badge" class="badge" hidden></span></button>
+        <button data-tab="team" data-min="owner">ทีมงาน</button>
+        <button data-tab="log" data-min="admin">ประวัติ</button>
+      </nav>
+      <span class="me"><span id="me-name"></span> <span id="me-role" class="role"></span>
+        <a href="../" target="_blank">ดูเว็บ</a>
+        <button id="logout" class="link">ออก</button></span>
+    </header>
+
+    <!-- แปลง -->
+    <section id="tab-plots" class="tab plots">
+      <div id="map"></div>
+      <div id="draw-bar" class="draw-bar" hidden>
+        <span id="draw-hint"></span>
+        <button id="draw-undo" class="secondary">ย้อนจุด</button>
+        <button id="draw-done">เสร็จ</button>
+        <button id="draw-cancel" class="secondary">ยกเลิก</button>
+      </div>
+      <aside class="side">
+        <div class="side-actions" data-min="admin">
+          <button id="new-plot">+ วาดแปลงใหม่</button>
+          <button id="coords-plot" class="secondary">กรอกพิกัด</button>
+          <label class="button secondary">นำเข้าไฟล์ <input id="import-file" type="file" accept=".geojson,.json,.kml" hidden></label>
+          <button id="edit-area" class="secondary">ขอบเขตชุมชน</button>
+        </div>
+        <div id="plot-panel"></div>
+        <input id="plot-search" type="search" placeholder="ค้นหารหัส / ชื่อแปลง / ชาวบ้าน">
+        <ul id="plot-list" class="list"></ul>
+      </aside>
+    </section>
+
+    <!-- ชาวบ้าน -->
+    <section id="tab-villagers" class="tab" hidden>
+      <div class="toolbar">
+        <input id="villager-search" type="search" placeholder="ค้นหาชื่อ / ชื่อเล่น / เบอร์">
+        <button id="new-villager" data-min="admin">+ เพิ่มชาวบ้าน</button>
+      </div>
+      <div id="villager-panel"></div>
+      <table class="table">
+        <thead><tr><th></th><th>ชื่อ</th><th>ชื่อเล่น</th><th>โทร</th><th>LINE</th><th>แปลง</th><th>บนแผนที่</th></tr></thead>
+        <tbody id="villager-rows"></tbody>
+      </table>
+    </section>
+
+    <!-- รูป -->
+    <section id="tab-photos" class="tab" hidden>
+      <div class="toolbar" id="photo-filters">
+        <button data-status="pending" class="active">รอจัดการ</button>
+        <button data-status="published">เผยแพร่แล้ว</button>
+        <button data-status="hidden">ซ่อนอยู่</button>
+      </div>
+      <div id="photo-grid" class="grid"></div>
+    </section>
+
+    <!-- ทีมงาน (owner) -->
+    <section id="tab-team" class="tab" hidden>
+      <h2>ทีมงาน</h2>
+      <table class="table">
+        <thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>สิทธิ์</th><th>ใช้งาน</th><th></th></tr></thead>
+        <tbody id="team-rows"></tbody>
+      </table>
+      <h2>เชิญคนใหม่</h2>
+      <form id="invite-form" class="inline">
+        <input name="username" placeholder="ชื่อผู้ใช้ (a-z 0-9 . _ -)" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,31}" autocapitalize="none" spellcheck="false" required>
+        <select name="role"><option value="staff">staff (ตรวจรูป)</option><option value="admin">admin (จัดการแปลง/ชาวบ้าน)</option></select>
+        <button type="submit">สร้างคำเชิญ</button>
+      </form>
+      <div id="invite-result"></div>
+      <ul id="invite-list" class="list"></ul>
+      <details class="muted"><summary>สิทธิ์แต่ละระดับ</summary>
+        <p><b>owner</b> ทำได้ทุกอย่าง + เชิญคน เปลี่ยนสิทธิ์ โอน owner (มีได้คนเดียว)<br>
+        <b>admin</b> วาด/แก้แปลง เพิ่มชาวบ้าน ออกโค้ดผูก LINE ผูกแปลง ดูประวัติ<br>
+        <b>staff</b> ดูทุกอย่าง ซ่อน/เผยแพร่รูป ย้ายรูปไปแปลงอื่น เขียนคำบรรยาย</p>
+      </details>
+    </section>
+
+    <!-- ประวัติ -->
+    <section id="tab-log" class="tab" hidden>
+      <h2>ประวัติการแก้ไขล่าสุด</h2>
+      <table class="table">
+        <thead><tr><th>เวลา</th><th>ใคร</th><th>ตาราง</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead>
+        <tbody id="log-rows"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <dialog id="dialog"><form method="dialog" id="dialog-body"></form></dialog>
+  <div id="toast" hidden></div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+  <script src="../config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "ra-nan-line-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "test": "node --test test/worker.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.151.2"
+  }
+}

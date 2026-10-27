@@ -1,0 +1,47 @@
+# LINE bot (ra-nan-line-webhook): ทดสอบทุก PR, push เข้า main = ทดสอบผ่านแล้วขึ้นจริง
+# ไม่มี preview เพราะ LINE ยิง webhook มาที่ URL เดียว
+name: LINE worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "line-worker/**"
+      - ".github/workflows/line-worker.yml"
+  pull_request:
+    paths:
+      - "line-worker/**"
+      - ".github/workflows/line-worker.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: line-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test test/worker.test.js
+        working-directory: line-worker
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.151.2"
+          workingDirectory: line-worker
+          # ต้องมี -c ไม่งั้น wrangler ไปใช้ wrangler.jsonc ของเว็บที่โฟลเดอร์แม่
+          # secret (LINE token, Supabase key) อยู่ใน Cloudflare ไม่ได้อยู่ใน repo และ deploy ไม่ลบ
+          command: deploy -c wrangler.toml
