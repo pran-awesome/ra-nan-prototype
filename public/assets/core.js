@@ -3,18 +3,20 @@
 (() => {
   const cfg = window.RANAN_CONFIG;
 
+  // สีโทนดินและพืช ให้เข้ากับพื้นครีมของเว็บ และยังเห็นชัดบนภาพดาวเทียม
   const LAND_USE = {
-    "นา": { color: "#e8c547", icon: "🌾" },
-    "สวน": { color: "#7cc95a", icon: "🌳" },
-    "ไร่": { color: "#d4904a", icon: "🌽" },
-    "บ่อปลา": { color: "#4fb3e0", icon: "🐟" },
-    "ที่อยู่อาศัย": { color: "#ef8a6b", icon: "🏡" },
-    "ป่า": { color: "#2f9e62", icon: "🌲" },
-    "อื่น ๆ": { color: "#b9b2a5", icon: "📍" },
+    "นา": { color: "#f2cf3d" },
+    "สวน": { color: "#56af31" },
+    "ไร่": { color: "#d08a45" },
+    "บ่อปลา": { color: "#92d5f2" },
+    "ที่อยู่อาศัย": { color: "#e8775a" },
+    "ป่า": { color: "#3c8a4c" },
+    "อื่น ๆ": { color: "#c9c1b2" },
   };
   const landUseOf = (p) => (p.land_use && LAND_USE[p.land_use] ? p.land_use : p.land_use ? "อื่น ๆ" : "ไม่ระบุ");
   const landUseColor = (name) => (LAND_USE[name] || { color: "#cfc9bd" }).color;
-  const landUseIcon = (name) => (LAND_USE[name] || { icon: "📍" }).icon;
+  // ใช้อักษรตัวแรกของชื่อการใช้ที่ดินเป็นสัญลักษณ์ (น, ส, ไ ...) แทนอีโมจิ
+  const landUseIcon = (name) => (name || "·").replace(/^[เแโใไ]/, "").charAt(0);
 
   async function fetchView(view, query) {
     if (cfg.useSampleData) {
@@ -202,22 +204,36 @@
   function renderNav(active) {
     const nav = document.querySelector(".site-nav");
     if (!nav) return;
+    const q = cfg.useSampleData ? "?sample" : "";
     const links = [
       ["index.html", "หน้าแรก", "home"],
       ["map.html", "แผนที่ชุมชน", "map"],
       ["stories.html", "เรื่องเล่า", "stories"],
     ];
     const brand = el("a", "brand");
-    brand.href = "index.html";
-    brand.append(el("span", "brand-mark", "ส"), el("span", "brand-text", "สบปืน"));
+    brand.href = "index.html" + q;
+    brand.setAttribute("aria-label", "บ้านสบปืน หน้าแรก");
+    const words = el("span", "brand-text");
+    words.append(el("b", null, "บ้านสบปืน"), el("small", null, "Sop Puen · Nan"));
+    brand.append(el("span", "brand-mark", "ส"), words);
     const ul = el("nav", "nav-links");
+    ul.id = "nav-links";
     for (const [href, label, key] of links) {
       const a = el("a", key === active ? "active" : null, label);
-      a.href = href + (cfg.useSampleData ? "?sample" : "");
+      a.href = href + q;
+      if (key === active) a.setAttribute("aria-current", "page");
       ul.append(a);
     }
-    brand.href += cfg.useSampleData ? "?sample" : "";
-    nav.replaceChildren(brand, ul);
+    const menu = el("button", "nav-menu");
+    menu.setAttribute("aria-label", "เมนู");
+    menu.setAttribute("aria-expanded", "false");
+    menu.setAttribute("aria-controls", "nav-links");
+    menu.append(el("span"), el("span"));
+    menu.onclick = () => {
+      const open = nav.classList.toggle("open");
+      menu.setAttribute("aria-expanded", String(open));
+    };
+    nav.replaceChildren(brand, ul, menu);
     const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 24);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -297,7 +313,7 @@
     if (s.photos.length > 4) media.append(el("span", "more-photos", `+${s.photos.length - 4}`));
     media.onclick = () => openLightbox(s.photos, 0, s.plot ? plotTitle(s.plot) : "");
     if (s.plot) {
-      const tag = el("span", "use-tag", `${landUseIcon(s.plot.landUse)} ${s.plot.landUse}`);
+      const tag = el("span", "use-tag", s.plot.landUse);
       tag.style.setProperty("--c", landUseColor(s.plot.landUse));
       media.append(tag);
     }

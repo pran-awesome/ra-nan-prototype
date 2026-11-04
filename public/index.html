@@ -5,125 +5,170 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>บ้านสบปืน · แผนที่เรื่องเล่าของชุมชน</title>
   <meta name="description" content="แผนที่ดาวเทียมของชุมชนบ้านสบปืน อ.เฉลิมพระเกียรติ จ.น่าน แปลงที่ดิน ผู้คน และรูปเล่าเรื่องที่ชาวบ้านส่งมาเองผ่าน LINE">
-  <meta name="theme-color" content="#14231a">
+  <meta name="theme-color" content="#f7f5ee">
   <meta property="og:title" content="บ้านสบปืน · แผนที่เรื่องเล่าของชุมชน">
   <meta property="og:description" content="แปลงที่ดิน ผู้คน และรูปเล่าเรื่องจากชาวบ้าน บนแผนที่ดาวเทียมเดียว">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2314231a'/><text x='32' y='45' font-size='36' text-anchor='middle' fill='%23e8c547' font-family='serif'>ส</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%231d1d1b'/><text x='32' y='43' font-size='32' text-anchor='middle' fill='%23ffe900' font-family='serif' font-style='italic'>ส</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Serif+Thai:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600&family=Trirong:ital,wght@0,300;1,200;1,300&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="assets/site.css">
 </head>
 <body class="page-home">
   <header class="site-nav on-dark"></header>
 
+  <!-- 1. ฉากเปิด: แผนที่ 3 มิติหมุนรอบหมู่บ้าน -->
   <section class="hero" aria-label="บ้านสบปืน">
     <div id="hero-map" class="hero-map" aria-hidden="true"></div>
     <div class="hero-shade"></div>
     <div class="hero-content">
-      <p class="eyebrow"><span class="pulse"></span><span id="hero-place">อ.เฉลิมพระเกียรติ จ.น่าน</span></p>
-      <h1 class="hero-title"><span class="reveal">เรื่องเล่า</span><span class="reveal d1">ของ<em id="hero-name">บ้านสบปืน</em></span></h1>
-      <p class="hero-lead reveal d2">ทุกแปลงนา ทุกสวน ทุกบ่อปลา และทุกภาพที่ชาวบ้านถ่ายเองจากมือถือ<br class="hide-sm"> วางอยู่บนแผนที่ดาวเทียมผืนเดียว ให้ใครก็มาเดินเที่ยวหมู่บ้านได้</p>
-      <div class="hero-cta reveal d3">
-        <a class="btn btn-primary" data-link="map.html">สำรวจแผนที่ <span aria-hidden="true">→</span></a>
-        <a class="btn btn-ghost" data-link="stories.html">อ่านเรื่องเล่า</a>
-      </div>
+      <p class="hero-place reveal" id="hero-place">อ.เฉลิมพระเกียรติ จ.น่าน</p>
+      <h1 class="hero-title">
+        <span class="reveal d1">เรื่องเล่า</span>
+        <span class="reveal d2 italic">ของ<span id="hero-name">บ้านสบปืน</span></span>
+      </h1>
     </div>
-    <div class="hero-stats reveal d4" id="hero-stats">
-      <div class="stat"><b data-count="plots">–</b><span>แปลงที่ดิน</span></div>
-      <div class="stat"><b data-count="rai">–</b><span>ไร่</span></div>
-      <div class="stat"><b data-count="people">–</b><span>ชาวบ้านผู้เล่าเรื่อง</span></div>
-      <div class="stat"><b data-count="photos">–</b><span>ภาพจากชาวบ้าน</span></div>
-    </div>
-    <div class="hero-coord" id="hero-coord"></div>
-    <a class="scroll-cue" href="#land" aria-label="เลื่อนลง"><span></span></a>
+    <a class="hero-note reveal d3" href="#how">
+      <b>ส่งรูปผ่าน LINE</b>
+      <span>ถ่ายจากแปลงของตัวเอง แล้วรูปจะขึ้นแผนที่ให้เอง</span>
+    </a>
+    <a class="hero-explore" href="#welcome">สำรวจ</a>
+    <p class="hero-coord" id="hero-coord"></p>
   </section>
 
-  <section class="section land" id="land">
-    <div class="wrap two-col">
-      <div>
-        <p class="kicker">ผืนดินของหมู่บ้าน</p>
-        <h2 class="section-title">ดินแต่ละผืน<br>มีเจ้าของ มีเรื่องเล่า</h2>
-        <p class="section-lead">ทีมงานชุมชนวาดขอบแปลงจริงลงบนภาพดาวเทียม แล้วผูกกับชาวบ้านที่ดูแลแปลงนั้น ภาพที่ชาวบ้านส่งมาจึงไปปักที่บ้านและไร่นาของเขาเองโดยไม่ต้องเปิด GPS</p>
-        <div id="land-breakdown" class="breakdown"></div>
-      </div>
-      <a class="land-map-card" data-link="map.html" aria-label="เปิดแผนที่ชุมชน">
+  <!-- 2. ยินดีต้อนรับ: คำใหญ่จาง ๆ ด้านหลัง + ภาพดาวเทียมในกรอบ -->
+  <section class="welcome" id="welcome">
+    <p class="ghost-word" aria-hidden="true">สบปืน</p>
+    <div class="wrap welcome-inner">
+      <p class="label">ยินดีต้อนรับสู่หมู่บ้าน</p>
+      <a class="welcome-frame" data-link="map.html" aria-label="เปิดแผนที่ชุมชน">
         <div id="mini-map" class="mini-map"></div>
-        <span class="mini-map-cta">เปิดแผนที่เต็มจอ →</span>
+        <span class="frame-cap">ภาพดาวเทียม · แตะเพื่อเปิดแผนที่</span>
       </a>
-    </div>
-  </section>
-
-  <section class="section stories-section">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <p class="kicker">ส่งตรงจากมือถือชาวบ้าน</p>
-          <h2 class="section-title">เรื่องเล่าล่าสุด</h2>
-        </div>
-        <a class="link-arrow" data-link="stories.html">ดูทั้งหมด →</a>
+      <div class="welcome-text">
+        <p>บ้านสบปืน อยู่ในอำเภอเฉลิมพระเกียรติ จังหวัดน่าน</p>
+        <p>นา สวน บ่อปลา และบ้านแต่ละหลัง มีคนดูแล และมีเรื่องของมันเอง</p>
+        <p>เราวาดขอบแปลงจริงลงบนภาพดาวเทียม แล้วให้ชาวบ้านเล่าเรื่องผ่านรูปจากมือถือ</p>
+        <p class="strong">ดูหมู่บ้านผ่านสายตาคนที่อยู่ที่นี่</p>
       </div>
-      <div id="latest-stories" class="bento"></div>
+      <dl class="stats" id="hero-stats">
+        <div><dt>แปลงที่ดิน</dt><dd data-count="plots">–</dd></div>
+        <div><dt>ไร่</dt><dd data-count="rai">–</dd></div>
+        <div><dt>ผู้เล่าเรื่อง</dt><dd data-count="people">–</dd></div>
+        <div><dt>ภาพจากชาวบ้าน</dt><dd data-count="photos">–</dd></div>
+      </dl>
     </div>
   </section>
 
-  <section class="section how">
+  <!-- 3. ผืนดิน: คำใหญ่เว้นระยะ + สัดส่วนการใช้ที่ดิน -->
+  <section class="land" id="land">
+    <div class="wrap land-head">
+      <p class="label">ผืนดินของหมู่บ้าน</p>
+      <h2 class="title">ดินแต่ละผืน <em>มีเจ้าของ มีเรื่องเล่า</em></h2>
+      <p class="lead">ทีมงานชุมชนวาดขอบแปลงลงบนภาพดาวเทียม แล้วผูกกับคนที่ดูแลแปลงนั้น รูปที่ชาวบ้านส่งมาจึงไปปักที่นาและสวนของเขาเอง โดยไม่ต้องเปิด GPS</p>
+    </div>
+    <p class="land-words" aria-hidden="true">
+      <span>นา&nbsp;&nbsp;สวน&nbsp;&nbsp;ไร่</span>
+      <span>บ่อปลา &amp; ป่า</span>
+    </p>
     <div class="wrap">
-      <p class="kicker center">ทำงานอย่างไร</p>
-      <h2 class="section-title center">จากกล้องมือถือ ถึงแผนที่ของทุกคน</h2>
+      <div id="land-breakdown" class="breakdown"></div>
+    </div>
+  </section>
+
+  <!-- 4. แปลงเด่น: ภาพครึ่งซ้าย ข้อความครึ่งขวา เลื่อนทีละแปลง -->
+  <section class="plots-slider" id="plots-slider" hidden>
+    <div class="ps-media" id="ps-media"></div>
+    <div class="ps-body">
+      <div class="ps-top">
+        <p class="label">แปลงในชุมชน</p>
+        <p class="ps-count" id="ps-count"></p>
+      </div>
+      <div class="ps-text" id="ps-text" aria-live="polite"></div>
+      <div class="ps-nav">
+        <button class="arrow" id="ps-prev" aria-label="แปลงก่อนหน้า"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="arrow" id="ps-next" aria-label="แปลงถัดไป"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        <a class="text-link" data-link="map.html">ดูทุกแปลงบนแผนที่</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. เรื่องเล่าล่าสุด: แถวการ์ดเลื่อนแนวนอน -->
+  <section class="stories-row">
+    <div class="wrap center-head">
+      <p class="label">ส่งตรงจากมือถือชาวบ้าน</p>
+      <h2 class="title">เรื่องเล่าล่าสุด</h2>
+      <p class="title-sub">ตามฤดูกาลของหมู่บ้าน</p>
+    </div>
+    <div class="rail" id="latest-stories"></div>
+    <div class="wrap rail-foot">
+      <a class="btn btn-line" data-link="stories.html">อ่านเรื่องเล่าทั้งหมด</a>
+    </div>
+  </section>
+
+  <!-- 6. ทำงานอย่างไร -->
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="how-head">
+        <p class="label">ทำงานอย่างไร</p>
+        <h2 class="title">จากกล้องมือถือ <em>ถึงแผนที่ของทุกคน</em></h2>
+      </div>
       <ol class="steps">
-        <li class="step">
+        <li>
           <span class="step-no">01</span>
-          <div class="step-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><rect x="13" y="4" width="22" height="40" rx="5"/><circle cx="24" cy="21" r="6"/><path d="M20 38h8"/></svg>
-          </div>
           <h3>ถ่ายแล้วส่งใน LINE</h3>
-          <p>ชาวบ้านส่งรูปเข้า LINE ของชุมชนได้เลย พิมพ์เล่าเพิ่มสั้น ๆ ก็ได้ ไม่ต้องติดตั้งแอปใหม่</p>
+          <p>ส่งรูปเข้า LINE ของชุมชนได้เลย จะพิมพ์เล่าเพิ่มสั้น ๆ ก็ได้ ไม่ต้องลงแอปใหม่</p>
         </li>
-        <li class="step">
+        <li>
           <span class="step-no">02</span>
-          <div class="step-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><path d="M6 14l12-6 12 6 12-6v26l-12 6-12-6-12 6z"/><path d="M18 8v26M30 14v26"/></svg>
-          </div>
-          <h3>ปักลงแปลงของตัวเอง</h3>
-          <p>ระบบรู้ว่าใครดูแลแปลงไหน รูปจึงไปอยู่ที่นา สวน หรือบ้านของคนส่งโดยอัตโนมัติ</p>
+          <h3>รูปไปอยู่ที่แปลงของคนส่ง</h3>
+          <p>ระบบรู้ว่าใครดูแลแปลงไหน รูปจึงไปปักที่นา สวน หรือบ้านของคนส่งเอง</p>
         </li>
-        <li class="step">
+        <li>
           <span class="step-no">03</span>
-          <div class="step-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18"/><path d="M6 24h36M24 6c6 6 6 30 0 36M24 6c-6 6-6 30 0 36"/></svg>
-          </div>
           <h3>ทุกคนเห็นความเปลี่ยนแปลง</h3>
-          <p>ภาพเรียงเป็นเรื่องเล่าตามเวลา เห็นข้าวออกรวง ปลาโต ป่าฟื้น จากมุมของคนในหมู่บ้านเอง</p>
+          <p>ภาพเรียงตามเวลา เห็นข้าวออกรวง ปลาโต ป่าฟื้น จากมุมของคนในหมู่บ้าน</p>
         </li>
       </ol>
     </div>
   </section>
 
-  <section class="section people" id="people-section">
-    <div class="wrap">
-      <p class="kicker center">คนสบปืน</p>
-      <h2 class="section-title center">ผู้เล่าเรื่องของหมู่บ้าน</h2>
-      <div id="people" class="people-cloud"></div>
+  <!-- 7. ผู้คน -->
+  <section class="people" id="people-section">
+    <div class="wrap people-head">
+      <div>
+        <p class="label">คนสบปืน</p>
+        <h2 class="title">ผู้เล่าเรื่อง<em>ของหมู่บ้าน</em></h2>
+      </div>
+      <a class="text-link" data-link="map.html">ดูแปลงของแต่ละคน</a>
     </div>
+    <div class="rail" id="people"></div>
   </section>
 
+  <!-- 8. ปิดท้าย -->
   <section class="final-cta">
     <div id="cta-map" class="cta-map" aria-hidden="true"></div>
     <div class="cta-inner">
-      <h2>มาเดินเที่ยวบ้านสบปืน<br>จากที่ไหนก็ได้</h2>
-      <a class="btn btn-primary" data-link="map.html">เปิดแผนที่ชุมชน →</a>
+      <h2>มาเดินเที่ยวบ้านสบปืน<em>จากที่ไหนก็ได้</em></h2>
+      <a class="btn btn-yellow" data-link="map.html">เปิดแผนที่ชุมชน</a>
     </div>
   </section>
 
   <footer class="site-footer">
-    <div class="wrap footer-grid">
-      <div>
-        <strong id="footer-name">ชุมชนบ้านสบปืน</strong>
-        <p id="footer-sub">อ.เฉลิมพระเกียรติ จ.น่าน</p>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <strong id="footer-name">ชุมชนบ้านสบปืน</strong>
+          <p id="footer-sub">อ.เฉลิมพระเกียรติ จ.น่าน</p>
+        </div>
+        <nav class="footer-links">
+          <a data-link="map.html">แผนที่ชุมชน</a>
+          <a data-link="stories.html">เรื่องเล่า</a>
+        </nav>
+        <p class="credits">ภาพดาวเทียม © Esri, Maxar, Earthstar Geographics<br>ข้อมูลความสูง © Mapzen/AWS<br>รูปและคำบรรยายเป็นของชาวบ้านผู้ส่ง</p>
       </div>
-      <p class="credits">ภาพดาวเทียม © Esri, Maxar, Earthstar Geographics · ข้อมูลความสูง © Mapzen/AWS<br>รูปและคำบรรยายเป็นของชาวบ้านผู้ส่ง</p>
+      <p class="footer-mark" aria-hidden="true">สบปืน</p>
     </div>
   </footer>
 

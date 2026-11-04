@@ -20,7 +20,7 @@
       box.append(b);
     };
     chip("all", "ทั้งหมด");
-    for (const [k] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, `${landUseIcon(k)} ${k}`, landUseColor(k));
+    for (const [k] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, k, landUseColor(k));
     box.hidden = counts.size < 2;
   }
 
@@ -39,8 +39,7 @@
     if (!data.stacks.length) {
       const empty = el("div", "empty-hero");
       empty.append(
-        el("span", "empty-icon", "📷"),
-        el("h3", null, "ยังไม่มีเรื่องเล่า"),
+                el("h3", null, "ยังไม่มีเรื่องเล่า"),
         el("p", null, "เรื่องแรกจะมาจากชาวบ้านสบปืนเอง เมื่อมีคนส่งรูปผ่าน LINE ของชุมชน ภาพจะขึ้นที่นี่และบนแผนที่ทันที"),
       );
       const a = el("a", "btn btn-primary", "ไปดูแผนที่หมู่บ้าน →");
