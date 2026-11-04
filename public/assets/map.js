@@ -55,7 +55,7 @@
       box.append(b);
     };
     chip("all", `ทั้งหมด ${data.plots.length}`);
-    for (const [k, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, `${landUseIcon(k)} ${k} ${n}`, landUseColor(k));
+    for (const [k, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, `${k} ${n}`, landUseColor(k));
     box.hidden = counts.size < 2;
   }
 
@@ -91,7 +91,7 @@
     $("result-count").textContent = data.plots.length ? `พบ ${shown.length} แปลง` : "";
     if (!data.plots.length) {
       const li = el("li", "list-empty");
-      li.append(el("span", "empty-icon", "🗺️"), el("strong", null, "ยังไม่มีแปลงบนแผนที่"), el("p", null, "ทีมงานชุมชนกำลังวาดขอบแปลงจากภาพดาวเทียม เส้นประสีทองคือขอบเขตของหมู่บ้าน"));
+      li.append(el("strong", null, "ยังไม่มีแปลงบนแผนที่"), el("p", null, "ทีมงานชุมชนกำลังวาดขอบแปลงจากภาพดาวเทียม เส้นประสีเหลืองคือขอบเขตของหมู่บ้าน"));
       list.append(li);
     } else if (!shown.length) {
       list.append(el("li", "list-empty", "ไม่พบแปลงที่ตรงกับคำค้น"));
@@ -117,7 +117,7 @@
       cover.onclick = () => openLightbox([...p.photos], 0, plotTitle(p));
       cover.classList.add("has-photo");
     } else cover.append(el("span", "d-cover-icon", landUseIcon(p.landUse)));
-    const tag = el("span", "use-tag", `${landUseIcon(p.landUse)} ${p.landUse}`);
+    const tag = el("span", "use-tag", p.landUse);
     tag.style.setProperty("--c", landUseColor(p.landUse));
     cover.append(tag);
     box.append(cover);
@@ -286,8 +286,7 @@
     // ใช้ style.load ไม่ใช่ load: event "load" รอภาพดาวเทียมครบก่อน ถ้าโหลด tile ไม่ได้ หมุดจะไม่ขึ้นเลย
     map.once("style.load", () => {
       map.addSource("area", { type: "geojson", data: data.area.geojson });
-      map.addLayer({ id: "area-glow", type: "line", source: "area", paint: { "line-color": "#ffe08a", "line-width": 10, "line-blur": 8, "line-opacity": 0.45 } });
-      map.addLayer({ id: "area-line", type: "line", source: "area", paint: { "line-color": "#ffe08a", "line-width": 2, "line-dasharray": [3, 2] } });
+      map.addLayer({ id: "area-line", type: "line", source: "area", paint: { "line-color": "#ffe900", "line-width": 2, "line-dasharray": [3, 2] } });
 
       map.addSource("plots", {
         type: "geojson",
@@ -330,7 +329,7 @@
       });
       map.addLayer({
         id: "loose", type: "circle", source: "loose",
-        paint: { "circle-radius": 7, "circle-color": "#ff6b4a", "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 },
+        paint: { "circle-radius": 7, "circle-color": "#ffe900", "circle-stroke-color": "#1d1d1b", "circle-stroke-width": 2.5 },
       });
       map.on("click", "loose", (e) => {
         const r = loose.find((x) => x.id === e.features[0].properties.id);
