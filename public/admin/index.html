@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>RA-NAN Admin</title>
+  <title>Smart Soppuen Admin</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="admin.css">
 </head>
@@ -12,7 +13,8 @@
   <!-- หน้า login -->
   <main id="login-view" class="login" hidden>
     <form id="login-form" class="card">
-      <h1>RA-NAN Admin</h1>
+      <img class="login-logo" src="../assets/logo.jpg" alt="Smart Soppuen" width="185" height="220">
+      <h1>ผู้ดูแลระบบ</h1>
       <p class="muted">สำหรับทีมงานเท่านั้น</p>
       <label>ชื่อผู้ใช้ <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
       <label>รหัสผ่าน <input name="password" type="password" autocomplete="current-password" required></label>
@@ -41,7 +43,7 @@
   <!-- แอปหลัก -->
   <div id="app" hidden>
     <header class="top">
-      <strong>RA-NAN Admin</strong>
+      <strong class="brand"><img src="../assets/logo-mark.png" alt="">Smart Soppuen Admin</strong>
       <nav id="tabs">
         <button data-tab="plots" class="active">แปลง</button>
         <button data-tab="villagers">ชาวบ้าน</button>

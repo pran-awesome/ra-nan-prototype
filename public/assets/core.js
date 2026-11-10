@@ -214,8 +214,13 @@
     brand.href = "index.html" + q;
     brand.setAttribute("aria-label", "บ้านสบปืน หน้าแรก");
     const words = el("span", "brand-text");
-    words.append(el("b", null, "บ้านสบปืน"), el("small", null, "Sop Puen · Nan"));
-    brand.append(el("span", "brand-mark", "ส"), words);
+    words.append(el("b", null, "Smart Soppuen"), el("small", null, "บ้านสบปืน · น่าน"));
+    const mark = el("span", "brand-mark");
+    const logo = document.createElement("img");
+    logo.src = "assets/logo-mark.png";
+    logo.alt = "";
+    mark.append(logo);
+    brand.append(mark, words);
     const ul = el("nav", "nav-links");
     ul.id = "nav-links";
     for (const [href, label, key] of links) {
