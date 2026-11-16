@@ -9,7 +9,7 @@ const SECRET = "test-secret";
 const A1 = { id: 11, code: "A-01", name: "นาข้าว", is_primary: true };
 const A2 = { id: 12, code: "A-02", name: "สวน", is_primary: false };
 
-function setup({ villagers = [], codes = {} } = {}) {
+function setup({ villagers = [], codes = {}, fields = [], fieldCodes = {}, allPlots = [A1, A2] } = {}) {
   const rows = [];
   const replies = [];
   const r2 = new Map();
@@ -98,6 +98,40 @@ function setup({ villagers = [], codes = {} } = {}) {
       delete codes[p_code];
       v.line_user_id = p_line_user_id;
       return { status: "linked", sender: v };
+    },
+    // จำลอง sql/006_line_field_accounts.sql
+    line_field_sender: ({ p_line_user_id }) => {
+      const f = fields.find((x) => x.line_user_id === p_line_user_id);
+      return f ? { id: f.id, label: f.label } : null;
+    },
+    consume_field_code: ({ p_code, p_line_user_id }) => {
+      const f = fieldCodes[p_code];
+      if (!f) return { status: "invalid" };
+      delete fieldCodes[p_code];
+      villagers.filter((v) => v.line_user_id === p_line_user_id).forEach((v) => (v.line_user_id = null));
+      f.line_user_id = p_line_user_id;
+      if (!fields.includes(f)) fields.push(f);
+      return { status: "linked", label: f.label };
+    },
+    line_field_plots: () => allPlots.map(({ id, code, name, owner }) => ({ id, code, name, owner: owner ?? null })),
+    add_field_photo: (a) => {
+      const f = fields.find((x) => x.line_user_id === a.p_line_user_id);
+      if (!f) return null;
+      const same = rows.filter((r) => r.field_account_id === f.id && r.batch_id === a.p_batch);
+      const plot = same.find((r) => r.plot_id)?.plot_id ?? null;
+      const row = { id: nextId++, created_at: new Date().toISOString(), user_id: a.p_line_user_id, villager_id: null,
+        field_account_id: f.id, plot_id: plot, status: plot ? "published" : "pending", image_url: a.p_image_url,
+        image_size: a.p_image_size, batch_id: a.p_batch };
+      rows.push(row);
+      return { id: row.id, plot_id: plot };
+    },
+    set_field_batch_plot: ({ p_line_user_id, p_batch, p_plot }) => {
+      const f = fields.find((x) => x.line_user_id === p_line_user_id);
+      const plot = allPlots.find((p) => p.id === p_plot);
+      if (!f || !plot) return null;
+      const hit = rows.filter((r) => r.field_account_id === f.id && r.batch_id === p_batch && r.status !== "removed");
+      hit.forEach((r) => Object.assign(r, { plot_id: p_plot, status: r.status === "pending" ? "published" : r.status }));
+      return { id: plot.id, code: plot.code, name: plot.name, updated: hit.length };
     },
     set_batch_plot: ({ p_line_user_id, p_batch, p_plot }) => {
       const plot = sender(p_line_user_id)?.plots.find((p) => p.id === p_plot);
@@ -458,4 +492,84 @@ test("caption: cannot caption someone else's photo", async () => {
   assert.match(replies.at(-1).text, /ไม่พบรูปนี้/);
   await post(env, [text("แอบแก้", "U2")]);
   assert.equal(rows[0].caption ?? null, null);
+});
+
+// ==========================================
+// LINE พิเศษ (โค้ด 8 หลัก): ส่งรูปแล้วเลือกแปลงเองจากทุกแปลง
+// ==========================================
+
+const fieldStaff = () => ({ id: 7, label: "ทีมงานภาคสนาม", line_user_id: "UF" });
+const buttonsOf = (msg) => msg.contents.contents.flatMap((b) => b.body.contents.map((c) => c.action));
+
+test("8-digit code links a special LINE, unlinking any villager link on that LINE", async () => {
+  const v = daeng([A1]);
+  const f = { id: 7, label: "ทีมงานภาคสนาม", line_user_id: null };
+  const { env, replies } = setup({ villagers: [v], fieldCodes: { "12345678": f } });
+  await post(env, [text("12345678")]);
+  assert.match(replies.at(-1).text, /LINE พิเศษ "ทีมงานภาคสนาม" เรียบร้อย/);
+  assert.equal(f.line_user_id, "U1");
+  assert.equal(v.line_user_id, null);
+});
+
+test("wrong 8-digit code gets a clear error and is not treated as a caption", async () => {
+  const { env, replies } = setup();
+  await post(env, [text("99999999")]);
+  assert.match(replies.at(-1).text, /โค้ดไม่ถูกต้อง/);
+});
+
+test("special LINE: photo set waits as pending, one reply with a plot picker for every plot", async () => {
+  const plots = Array.from({ length: 10 }, (_, i) => ({ id: 100 + i, code: `P-${100 + i}`, name: `แปลง${i}`, owner: i === 0 ? "มวล" : null }));
+  const { env, rows, replies } = setup({ fields: [fieldStaff()], allPlots: plots });
+  await post(env, [image("m1", { id: "s1", index: 1, total: 2 }, "UF"), image("m2", { id: "s1", index: 2, total: 2 }, "UF")]);
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((r) => r.status === "pending" && r.plot_id === null && r.villager_id === null && r.field_account_id === 7));
+  assert.equal(replies.length, 1, "image set replies once");
+  assert.equal(replies[0].type, "flex");
+  const pages = replies[0].contents.contents;
+  assert.equal(pages.length, 2, "10 plots = 2 cards of up to 8 buttons");
+  const btns = buttonsOf(replies[0]);
+  assert.equal(btns.length, 10, "every plot has a button (more than quick reply's 13 limit is fine)");
+  assert.equal(btns[0].label, "P-100 แปลง0 (มวล)");
+  assert.equal(btns[3].data, "action=fplot&plot=103&batch=s1");
+});
+
+test("special LINE: tapping a plot publishes the whole set there", async () => {
+  const { env, rows, replies } = setup({ fields: [fieldStaff()] });
+  await post(env, [image("m1", { id: "s1", index: 1, total: 2 }, "UF"), image("m2", { id: "s1", index: 2, total: 2 }, "UF")]);
+  const data = buttonsOf(replies[0]).find((b) => b.data.includes("plot=12")).data;
+  await post(env, [{ type: "postback", replyToken: "rt-pb", source: src("UF"), postback: { data } }]);
+  assert.ok(rows.every((r) => r.plot_id === 12 && r.status === "published"));
+  assert.match(replies.at(-1).text, /ลงรูป 2 รูปที่แปลง A-02 สวน แล้ว/);
+});
+
+test("special LINE: plot that no longer exists is refused", async () => {
+  const { env, rows, replies } = setup({ fields: [fieldStaff()] });
+  await post(env, [image("m1", null, "UF")]);
+  await post(env, [{ type: "postback", replyToken: "rt-pb", source: src("UF"), postback: { data: "action=fplot&plot=999&batch=m1" } }]);
+  assert.equal(rows[0].status, "pending");
+  assert.match(replies.at(-1).text, /เลือกแปลงนี้ไม่ได้/);
+});
+
+test("special LINE: a villager cannot use the special plot picker", async () => {
+  const { env, rows, replies } = setup({ villagers: [daeng([A1])] });
+  await post(env, [image("m1")]);
+  await post(env, [{ type: "postback", replyToken: "rt-pb", source: src(), postback: { data: "action=fplot&plot=12&batch=m1" } }]);
+  assert.equal(rows[0].plot_id, 11);
+  assert.match(replies.at(-1).text, /เลือกแปลงนี้ไม่ได้/);
+});
+
+test("special LINE: chat text gets no linking hint; 'รูปของฉัน' points to admin", async () => {
+  const { env, replies } = setup({ fields: [fieldStaff()] });
+  await post(env, [text("สวัสดี", "UF")]);
+  assert.equal(replies.length, 0);
+  await post(env, [text("รูปของฉัน", "UF")]);
+  assert.match(replies.at(-1).text, /หน้า admin/);
+});
+
+test("special LINE: storage limit still applies", async () => {
+  const { env, rows, replies, usage } = setup({ fields: [fieldStaff()] });
+  usage.bytes = 8e9;
+  await post(env, [image("m1", null, "UF")]);
+  assert.equal(rows.length, 0);
+  assert.match(replies[0].text, /พื้นที่เก็บรูปของระบบเต็ม/);
 });

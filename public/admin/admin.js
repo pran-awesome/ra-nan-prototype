@@ -13,6 +13,7 @@ const state = {
   area: null,
   selectedPlot: null,
   photoStatus: "pending",
+  fieldAccounts: [],
 };
 const $ = (id) => document.getElementById(id);
 const can = (min) => RANK[state.profile?.role] >= RANK[min];
@@ -227,6 +228,7 @@ async function showTab(tab) {
   if (tab === "plots") map?.resize();
   if (tab === "villagers") renderVillagers();
   if (tab === "photos") await loadPhotos();
+  if (tab === "field") await loadField();
   if (tab === "team") await loadTeam();
   if (tab === "log") await loadLog();
 }
@@ -961,12 +963,13 @@ async function refreshPendingBadge() {
 async function loadPhotos() {
   const rows = await q(
     sb.from("reports")
-      .select("id,image_url,created_at,status,caption,user_id,plot_id,villager_id,location_source,address")
+      .select("id,image_url,created_at,status,caption,user_id,plot_id,villager_id,field_account_id,location_source,address")
       .eq("status", state.photoStatus)
       .not("image_url", "is", null)
       .order("created_at", { ascending: false })
       .limit(60)
   );
+  if (can("admin") && rows.some((r) => r.field_account_id)) state.fieldAccounts = await q(sb.from("line_field_accounts").select("id,label"));
   const grid = $("photo-grid");
   grid.replaceChildren(...rows.map(photoCard));
   if (!rows.length) grid.append(h("p", { class: "muted" }, "ไม่มีรูปในหมวดนี้"));
@@ -988,7 +991,10 @@ function photoCard(r) {
   const fields = () => ({ plot_id: plotSel.value ? Number(plotSel.value) : null, caption: caption.value.trim() || null });
 
   let who;
-  if (v) {
+  if (r.field_account_id) {
+    const f = state.fieldAccounts.find((x) => x.id === r.field_account_id);
+    who = h("div", { class: "who" }, avatar(null, "★"), h("span", { class: "pill ok" }, "LINE พิเศษ"), f ? f.label : "");
+  } else if (v) {
     who = h("div", { class: "who" }, avatar(v.avatar_url, v.nickname || v.full_name), villagerName(v));
   } else {
     const pick = h("select", {},
@@ -1028,6 +1034,65 @@ function photoCard(r) {
         }, "เผยแพร่"),
         r.status !== "hidden" && h("button", { class: "secondary", onclick: action(() => update({ ...fields(), status: "hidden" }, "ซ่อนแล้ว")) }, "ซ่อน")))
   );
+}
+
+// ==========================================
+// LINE พิเศษ (admin): ส่งรูปได้ทุกแปลง เลือกแปลงเองในแชท (sql/006_line_field_accounts.sql)
+// ==========================================
+
+async function loadField() {
+  state.fieldAccounts = await q(sb.from("line_field_accounts").select("*").order("created_at", { ascending: false }));
+  const rows = state.fieldAccounts.map((f) => {
+    const codeLive = f.code && new Date(f.code_expires_at) > new Date();
+    return h("tr", { class: f.is_active ? "" : "muted" },
+      h("td", {}, f.label),
+      h("td", {}, !f.is_active ? h("span", { class: "pill" }, "ปิดใช้งาน")
+        : f.line_user_id ? h("span", {}, h("span", { class: "pill ok" }, "ผูกแล้ว"), " ", f.line_display_name || "", h("div", { class: "sub" }, fmtDate(f.linked_at)))
+        : h("span", { class: "pill warn" }, "ยังไม่ผูก")),
+      h("td", {}, codeLive ? h("span", {}, h("b", {}, f.code), h("div", { class: "sub" }, `ใช้ได้ถึง ${fmtDate(f.code_expires_at)}`)) : "-"),
+      h("td", {},
+        h("button", { class: "link", onclick: action(() => newFieldCode(f.label, f.id)) }, f.line_user_id ? "ออกโค้ดใหม่ (เปลี่ยนเครื่อง)" : "ออกโค้ดใหม่"),
+        f.is_active && h("button", { class: "link", onclick: action(() => revokeField(f)) }, "ปิดใช้งาน")));
+  });
+  $("field-rows").replaceChildren(...rows);
+  if (!rows.length) $("field-rows").append(h("tr", {}, h("td", { colspan: 4, class: "muted" }, "ยังไม่มี LINE พิเศษ")));
+}
+
+$("field-form").onsubmit = action(async (e) => {
+  const label = new FormData(e.target).get("label").trim();
+  if (!label) throw new Error("ใส่ชื่อเรียกก่อน");
+  await newFieldCode(label, null);
+  e.target.reset();
+});
+
+async function newFieldCode(label, id) {
+  const res = await q(sb.rpc("create_field_code", { p_label: label, p_id: id }));
+  await loadField();
+  await ask({
+    title: `โค้ด LINE พิเศษ: ${res.label}`,
+    body: [
+      h("div", { class: "code-box" }, res.code),
+      h("ol", {},
+        h("li", {}, "เพิ่มเพื่อน LINE ของ RA-NAN"),
+        h("li", {}, "พิมพ์ตัวเลข 8 หลักนี้ส่งในแชท"),
+        h("li", {}, "ต่อไปส่งรูปมา บอทจะให้จิ้มเลือกแปลง จิ้มแล้วรูปขึ้นแผนที่ทันที")),
+      h("p", { class: "muted" }, `โค้ดใช้ได้ครั้งเดียว ถึง ${fmtDate(res.expires_at)} ออกโค้ดใหม่แล้วโค้ดเก่าใช้ไม่ได้ ถ้า LINE นี้เคยผูกกับชาวบ้าน จะถูกเปลี่ยนเป็น LINE พิเศษแทน`),
+      h("button", { type: "button", class: "secondary no-print", onclick: () => window.print() }, "พิมพ์"),
+    ],
+    ok: "ปิด", cancel: null,
+  });
+}
+
+async function revokeField(f) {
+  const ok = await ask({
+    title: `ปิดใช้งาน "${f.label}"?`,
+    body: [h("p", {}, "LINE นี้จะส่งรูปเข้าระบบไม่ได้อีก รูปที่ส่งมาแล้วยังอยู่ครบ เปิดใช้ใหม่ได้ด้วยการออกโค้ดใหม่")],
+    ok: "ปิดใช้งาน", danger: true,
+  });
+  if (!ok) return;
+  await q(sb.rpc("revoke_field_account", { p_id: f.id }));
+  toast("ปิดใช้งานแล้ว");
+  await loadField();
 }
 
 // ==========================================
@@ -1095,7 +1160,7 @@ async function transferOwner(p) {
 // ประวัติ
 // ==========================================
 
-const TABLE_TH = { plots: "แปลง", villagers: "ชาวบ้าน", plot_assignments: "ผู้ใช้แปลง", reports: "รูป", profiles: "ทีมงาน", staff_invites: "คำเชิญ", areas: "ขอบเขตชุมชน" };
+const TABLE_TH = { plots: "แปลง", villagers: "ชาวบ้าน", plot_assignments: "ผู้ใช้แปลง", reports: "รูป", profiles: "ทีมงาน", staff_invites: "คำเชิญ", areas: "ขอบเขตชุมชน", line_field_accounts: "LINE พิเศษ" };
 const ACTION_TH = { INSERT: "เพิ่ม", UPDATE: "แก้", DELETE: "ลบ" };
 
 async function loadLog() {
@@ -1106,7 +1171,7 @@ async function loadLog() {
   const name = (id) => { const p = people.find((x) => x.id === id); return p ? p.display_name || p.username : id ? "?" : "ระบบ/LINE"; };
   $("log-rows").replaceChildren(...rows.map((r) => {
     const obj = r.after || r.before || {};
-    const label = obj.code || obj.full_name || obj.username || obj.email || obj.name || `#${r.row_id}`;
+    const label = (r.table_name === "line_field_accounts" && obj.label) || obj.code || obj.full_name || obj.username || obj.email || obj.name || `#${r.row_id}`;
     let detail = label;
     if (r.action === "UPDATE") {
       const keys = Object.keys(r.after).filter((k) => !["updated_at", "area_rai"].includes(k) && JSON.stringify(r.after[k]) !== JSON.stringify(r.before[k]));

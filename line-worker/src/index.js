@@ -77,41 +77,15 @@ async function handleImage(event, env, userId) {
   // รับรูปเฉพาะคนที่ผูกบัญชีแล้ว (ไม่ดึงรูป ไม่เก็บอะไรเลยถ้ายังไม่ผูก)
   const sender = await db.rpc("line_sender", { p_line_user_id: userId });
   if (!sender) {
+    const field = await db.rpc("line_field_sender", { p_line_user_id: userId });
+    if (field) return handleFieldImage(event, env, db, userId, shouldReply);
     if (shouldReply) await replyText(env, event.replyToken, NOT_LINKED_TEXT);
     return;
   }
 
-  let image;
-  try {
-    image = await fetchLineImage(env, message.id);
-  } catch (err) {
-    console.error("image fetch failed", err?.stack || String(err));
-    if (shouldReply) await replyText(env, event.replyToken, "❌ เกิดข้อผิดพลาดในการรับรูปภาพ กรุณาลองส่งใหม่อีกครั้ง");
-    return;
-  }
-
-  // ระบบป้องกันพื้นที่เต็ม: ถ้าใช้ไปแล้ว + รูปนี้ เกินเพดาน ไม่รับรูป
-  // ถ้าเช็กยอดไม่ได้ ให้ปฏิเสธไว้ก่อน (fail closed) เพื่อไม่ให้เกินโดยไม่รู้ตัว
-  let full = true;
-  try {
-    full = (await db.usageBytes()) + image.size > storageLimitBytes(env);
-  } catch (err) {
-    console.error("usage check failed", err?.stack || String(err));
-  }
-  if (full) {
-    console.warn("storage limit reached, image rejected", message.id);
-    if (shouldReply) await replyText(env, event.replyToken, STORAGE_FULL_TEXT);
-    return;
-  }
-
-  let imageUrl;
-  try {
-    imageUrl = await storeImage(env, message.id, image);
-  } catch (err) {
-    console.error("image upload failed", err?.stack || String(err));
-    if (shouldReply) await replyText(env, event.replyToken, "❌ เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาลองส่งใหม่อีกครั้ง");
-    return;
-  }
+  const stored = await receiveImage(event, env, db, shouldReply);
+  if (!stored) return;
+  const { image, imageUrl } = stored;
 
   // ใช้แปลงไหน (แปลงหลักมาก่อน) ยังไม่มีแปลง = รอทีมงานระบุแปลงในหน้า admin
   const plots = sender.plots || [];
@@ -160,6 +134,108 @@ async function handleImage(event, env, userId) {
   }
 }
 
+// ดึงรูปจาก LINE, เช็กพื้นที่, เก็บลง R2 ถ้าพลาดตอบชาวบ้านแล้วคืน null
+async function receiveImage(event, env, db, shouldReply) {
+  const message = event.message;
+  let image;
+  try {
+    image = await fetchLineImage(env, message.id);
+  } catch (err) {
+    console.error("image fetch failed", err?.stack || String(err));
+    if (shouldReply) await replyText(env, event.replyToken, "❌ เกิดข้อผิดพลาดในการรับรูปภาพ กรุณาลองส่งใหม่อีกครั้ง");
+    return null;
+  }
+
+  // ระบบป้องกันพื้นที่เต็ม: ถ้าใช้ไปแล้ว + รูปนี้ เกินเพดาน ไม่รับรูป
+  // ถ้าเช็กยอดไม่ได้ ให้ปฏิเสธไว้ก่อน (fail closed) เพื่อไม่ให้เกินโดยไม่รู้ตัว
+  let full = true;
+  try {
+    full = (await db.usageBytes()) + image.size > storageLimitBytes(env);
+  } catch (err) {
+    console.error("usage check failed", err?.stack || String(err));
+  }
+  if (full) {
+    console.warn("storage limit reached, image rejected", message.id);
+    if (shouldReply) await replyText(env, event.replyToken, STORAGE_FULL_TEXT);
+    return null;
+  }
+
+  try {
+    return { image, imageUrl: await storeImage(env, message.id, image) };
+  } catch (err) {
+    console.error("image upload failed", err?.stack || String(err));
+    if (shouldReply) await replyText(env, event.replyToken, "❌ เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาลองส่งใหม่อีกครั้ง");
+    return null;
+  }
+}
+
+// LINE พิเศษ (โค้ด 8 หลักจากหน้า admin): รูปรอไว้ก่อน แล้วให้จิ้มเลือกแปลงจากทุกแปลง (sql/006_line_field_accounts.sql)
+async function handleFieldImage(event, env, db, userId, shouldReply) {
+  const message = event.message;
+  const set = message.imageSet;
+  const batch = set?.id || message.id;
+  const stored = await receiveImage(event, env, db, shouldReply);
+  if (!stored) return;
+  const saved = await db.rpc("add_field_photo", {
+    p_line_user_id: userId,
+    p_image_url: stored.imageUrl,
+    p_image_size: stored.image.size,
+    p_batch: batch,
+  });
+  if (!shouldReply) return;
+  const got = set ? `ได้รับรูป ${set.total} รูปแล้ว` : "ได้รับรูปแล้ว";
+  if (saved?.plot_id) return replyText(env, event.replyToken, `✅ ${got} ลงแปลงที่เลือกไว้แล้ว`);
+  const plots = (await db.rpc("line_field_plots", {})) || [];
+  if (!plots.length) return replyText(env, event.replyToken, `✅ ${got} ตอนนี้ยังไม่มีแปลงในระบบ ทีมงานจะระบุแปลงให้ในหน้า admin`);
+  await replyMessages(env, event.replyToken, [fieldPlotPicker(plots, batch, got)]);
+}
+
+// การ์ดเลื่อนซ้ายขวา การ์ดละ FIELD_PER_BUBBLE ปุ่ม (quick reply ได้แค่ 13 ปุ่ม ไม่พอเมื่อมีหลายแปลง)
+const FIELD_PER_BUBBLE = 8;
+const FIELD_MAX_BUBBLES = 12;
+export function fieldPlotPicker(plots, batch, got) {
+  const pages = [];
+  for (let i = 0; i < plots.length && pages.length < FIELD_MAX_BUBBLES; i += FIELD_PER_BUBBLE) pages.push(plots.slice(i, i + FIELD_PER_BUBBLE));
+  const shown = pages.reduce((n, p) => n + p.length, 0);
+  return {
+    type: "flex",
+    altText: `${got} เลือกแปลงที่จะลงรูป`,
+    contents: {
+      type: "carousel",
+      contents: pages.map((page, idx) => ({
+        type: "bubble",
+        size: "kilo",
+        header: {
+          type: "box", layout: "vertical", paddingBottom: "none",
+          contents: [
+            { type: "text", text: `✅ ${got}`, weight: "bold", size: "sm", wrap: true },
+            { type: "text", text: `เลือกแปลงที่จะลงรูป${pages.length > 1 ? ` (${idx + 1}/${pages.length} เลื่อนดูเพิ่ม)` : ""}`, size: "xs", color: "#888888", wrap: true },
+            ...(idx === pages.length - 1 && shown < plots.length
+              ? [{ type: "text", text: `ไม่พบแปลงที่ต้องการ? ทีมงานระบุได้ในหน้า admin (มี ${plots.length} แปลง)`, size: "xxs", color: "#888888", wrap: true }]
+              : []),
+          ],
+        },
+        body: {
+          type: "box", layout: "vertical", spacing: "sm",
+          contents: page.map((p) => ({
+            type: "button", style: "secondary", height: "sm",
+            action: {
+              type: "postback",
+              label: [...fieldPlotLabel(p)].slice(0, 40).join(""),
+              data: `action=fplot&plot=${p.id}&batch=${enc(batch)}`,
+              displayText: `ลงแปลง ${plotLabel(p)}`,
+            },
+          })),
+        },
+      })),
+    },
+  };
+}
+
+function fieldPlotLabel(p) {
+  return p.owner && !(p.name || "").includes(p.owner) ? `${plotLabel(p)} (${p.owner})` : plotLabel(p);
+}
+
 // ไม่รับตำแหน่งจากชาวบ้านแล้ว หมุดอยู่ที่แปลงที่ทีมงานกำหนดเท่านั้น (กันปักหมุดผิดที่)
 async function handleLocation(event, env) {
   await replyText(
@@ -174,6 +250,7 @@ async function handleText(event, env, userId) {
   const code = text.match(/^\d{6}$/)?.[0];
   const db = supabase(env);
 
+  if (/^\d{8}$/.test(text)) return linkFieldAccount(event, env, db, userId, text);
   if (MY_PHOTOS_RE.test(text)) return showMyPhotos(event, env, db, userId);
 
   // กำลังรอคำบรรยาย (กดปุ่ม "เขียนคำบรรยาย" ไว้ภายใน 10 นาที): ข้อความนี้คือคำบรรยาย
@@ -189,7 +266,7 @@ async function handleText(event, env, userId) {
 
   if (!code) {
     // คุยทั่วไป: ตอบเฉพาะคนที่ยังไม่ผูก เพื่อบอกวิธีผูก
-    if (!(await db.rpc("line_sender", { p_line_user_id: userId }))) {
+    if (!(await db.rpc("line_sender", { p_line_user_id: userId })) && !(await db.rpc("line_field_sender", { p_line_user_id: userId }))) {
       await replyText(env, event.replyToken, LINK_HINT_TEXT);
     }
     return;
@@ -222,17 +299,44 @@ async function handleText(event, env, userId) {
   }
 }
 
+async function linkFieldAccount(event, env, db, userId, code) {
+  const profile = await getProfile(env, userId);
+  const result = await db.rpc("consume_field_code", {
+    p_code: code,
+    p_line_user_id: userId,
+    p_display_name: profile?.displayName ?? null,
+  });
+  if (result?.status === "linked") {
+    return replyText(
+      env,
+      event.replyToken,
+      `✅ ผูกเป็น LINE พิเศษ "${result.label}" เรียบร้อยแล้ว\n\nต่อไปส่งรูปมาได้เลย แล้วจิ้มเลือกแปลงที่จะลงรูป รูปจะขึ้นแผนที่ที่แปลงนั้นทันที`
+    );
+  }
+  if (result?.status === "rate_limited") {
+    return replyText(env, event.replyToken, "⏳ ลองโค้ดผิดหลายครั้งเกินไป กรุณารอประมาณ 1 ชั่วโมงแล้วลองใหม่ครับ");
+  }
+  return replyText(env, event.replyToken, "❌ โค้ดไม่ถูกต้องหรือหมดอายุแล้ว กรุณาขอโค้ดใหม่จากทีมงานครับ");
+}
+
 async function handleFollow(event, env, userId) {
-  const sender = await supabase(env).rpc("line_sender", { p_line_user_id: userId });
+  const db = supabase(env);
+  const sender = await db.rpc("line_sender", { p_line_user_id: userId });
+  const field = sender ? null : await db.rpc("line_field_sender", { p_line_user_id: userId });
   const text = sender
     ? `ยินดีต้อนรับกลับครับ คุณ${sender.full_name} ส่งรูปมาได้เลย หมุดจะขึ้นที่แปลงของคุณ`
-    : `สวัสดีครับ ยินดีต้อนรับสู่ RA-NAN 🌾 ก่อนส่งรูป ต้องผูกบัญชีกับทีมงานก่อนครับ\n\n${LINK_HINT_TEXT}`;
+    : field
+      ? `ยินดีต้อนรับกลับครับ (LINE พิเศษ "${field.label}") ส่งรูปมาแล้วจิ้มเลือกแปลงได้เลย`
+      : `สวัสดีครับ ยินดีต้อนรับสู่ RA-NAN 🌾 ก่อนส่งรูป ต้องผูกบัญชีกับทีมงานก่อนครับ\n\n${LINK_HINT_TEXT}`;
   await replyText(env, event.replyToken, text);
 }
 
 // เมนู "รูปของฉัน": การ์ด 1 ใบต่อ 1 stack (stack ใหม่สุดก่อน) แต่ละรูปมีปุ่มลบ
 async function showMyPhotos(event, env, db, userId) {
   if (!(await db.rpc("line_sender", { p_line_user_id: userId }))) {
+    if (await db.rpc("line_field_sender", { p_line_user_id: userId })) {
+      return replyText(env, event.replyToken, "LINE พิเศษดูและแก้รูปได้ในหน้า admin (แท็บ \"รูปที่ส่งเข้ามา\") ครับ");
+    }
     return replyText(env, event.replyToken, `ต้องผูกบัญชีก่อนครับ\n\n${LINK_HINT_TEXT}`);
   }
   const stacks = (await db.rpc("line_my_photos", { p_line_user_id: userId })) || [];
@@ -343,6 +447,16 @@ async function handlePostback(event, env, userId) {
   if (action === "capcancel") {
     await supabase(env).rpc("cancel_caption", { p_line_user_id: userId });
     return replyText(env, event.replyToken, "ยกเลิกแล้วครับ");
+  }
+  if (action === "fplot") {
+    const plot = await supabase(env).rpc("set_field_batch_plot", {
+      p_line_user_id: userId,
+      p_batch: params.get("batch"),
+      p_plot: Number(params.get("plot")),
+    });
+    if (!plot) return replyText(env, event.replyToken, "❌ เลือกแปลงนี้ไม่ได้ (แปลงถูกปิดไปแล้ว หรือบัญชีนี้ไม่ใช่ LINE พิเศษแล้ว)");
+    if (!plot.updated) return replyText(env, event.replyToken, "ไม่พบรูปชุดนี้แล้วครับ (ส่งมาเกิน 1 วัน หรือถูกลบไปแล้ว) ทีมงานแก้ได้ในหน้า admin");
+    return replyText(env, event.replyToken, `📍 ลงรูป ${plot.updated} รูปที่แปลง ${plotLabel(plot)} แล้ว ขึ้นแผนที่เรียบร้อยครับ`);
   }
 
   const plotId = Number(params.get("plot"));

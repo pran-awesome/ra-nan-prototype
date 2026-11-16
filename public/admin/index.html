@@ -48,6 +48,7 @@
         <button data-tab="plots" class="active">แปลง</button>
         <button data-tab="villagers">ชาวบ้าน</button>
         <button data-tab="photos">รูปที่ส่งเข้ามา <span id="pending-badge" class="badge" hidden></span></button>
+        <button data-tab="field" data-min="admin">LINE พิเศษ</button>
         <button data-tab="team" data-min="owner">ทีมงาน</button>
         <button data-tab="log" data-min="admin">ประวัติ</button>
       </nav>
@@ -99,6 +100,21 @@
         <button data-status="hidden">ซ่อนอยู่</button>
       </div>
       <div id="photo-grid" class="grid"></div>
+    </section>
+
+    <!-- LINE พิเศษ (admin) -->
+    <section id="tab-field" class="tab" hidden>
+      <h2>LINE พิเศษ</h2>
+      <p class="muted">LINE ที่ผูกด้วยโค้ดนี้ส่งรูปได้ทุกแปลง ส่งรูปแล้วบอทจะให้จิ้มเลือกแปลง จิ้มแล้วรูปขึ้นแผนที่ทันที
+        ถ้าไม่จิ้ม รูปจะรออยู่ใน "รูปที่ส่งเข้ามา" ให้ระบุแปลงเอง เหมาะกับทีมงานภาคสนามหรือคนที่ถ่ายรูปแทนชาวบ้าน</p>
+      <form id="field-form" class="inline">
+        <input name="label" placeholder="ชื่อเรียก เช่น ทีมงานภาคสนาม, น้องเฟิร์น" maxlength="60" required>
+        <button type="submit">+ สร้างโค้ด LINE พิเศษ</button>
+      </form>
+      <table class="table">
+        <thead><tr><th>ชื่อเรียก</th><th>LINE</th><th>โค้ด</th><th></th></tr></thead>
+        <tbody id="field-rows"></tbody>
+      </table>
     </section>
 
     <!-- ทีมงาน (owner) -->
