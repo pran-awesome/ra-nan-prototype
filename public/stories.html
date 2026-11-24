@@ -1,8 +1,30 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" class="t-loading">
+<!--
+  ========================================================================
+  แก้ "ข้อความ" ในหน้านี้ที่ไฟล์   content/text.txt   (ไม่ใช่ไฟล์นี้)
+  ========================================================================
+  ตัวหนังสือบนเว็บเกือบทั้งหมดถูกดึงมาจาก content/text.txt ไม่ใช่จาก HTML ตรงนี้
+
+  กฎที่ต้องรู้ก่อนแก้ไฟล์นี้:
+    1. element ที่มี data-t="ชื่อ" , data-t-placeholder="ชื่อ" ,
+       data-t-aria-label="ชื่อ" หรือ data-t-title="ชื่อ"
+       -> ข้อความที่เห็นในไฟล์นี้เป็นแค่ "ค่าสำรอง" เผื่อ JS โหลดไม่ทัน
+       -> แก้ข้อความจริงที่  content/text.txt  โดยหาบรรทัดชื่อนั้น (เช่น [home] ... ชื่อ = ...)
+       -> ห้ามแก้ข้อความตรงนี้เฉย ๆ เพราะมันจะไม่ขึ้นจริง (จะถูก JS เขียนทับด้วยค่าจาก text.txt เสมอ)
+    2. จะเพิ่มข้อความใหม่ตรงไหนในหน้านี้ ให้ใส่ data-t="หมวด.ชื่อ" กับ element นั้น
+       แล้วไปเพิ่มบรรทัด  ชื่อ = ข้อความ  ในหมวดที่ตรงกันของ content/text.txt ด้วย
+       (ห้ามพิมพ์ข้อความภาษาไทยลอย ๆ ลงในไฟล์ .html โดยไม่มี data-t)
+    3. ชื่อแปลง/ชื่อชาวบ้าน/รูปถ่าย/คำบรรยายรูป/ประเภทที่ดิน ไม่ได้อยู่ในไฟล์ไหนเลย
+       เพราะมันมาจากฐานข้อมูลสด (Supabase) ผ่านหน้า /admin/ -> อย่าพยายามแก้ตรงนี้
+    4. <title> ด้านล่าง กับ <meta name="description">/<meta property="og:..."> คือ 2 จุดที่
+       "ไม่ได้" ถูก JS เขียนทับ (โปรแกรมแชร์ลิงก์ของ LINE/Facebook อ่านมันตรง ๆ โดยไม่รัน JS)
+       ถ้าจะเปลี่ยนต้องแก้ตรงนี้เลย ที่อื่นในไฟล์ห้ามแก้
+-->
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- ชื่อแท็บเบราว์เซอร์ + ข้อความตอนแชร์ลิงก์: แก้ตรงนี้ได้เลย ไม่ได้อยู่ใน content/text.txt -->
   <title>เรื่องเล่า · บ้านสบปืน</title>
   <meta name="description" content="รูปและคำเล่าที่ชาวบ้านสบปืนส่งมาเองผ่าน LINE เรียงตามเวลา">
   <meta name="theme-color" content="#f7f5ee">
@@ -18,14 +40,14 @@
 
   <header class="page-hero">
     <div class="wrap">
-      <p class="label" id="area-name">บันทึกความเปลี่ยนแปลงของชุมชน</p>
-      <h1 class="title">เรื่องเล่า<em>จากชาวบ้าน</em></h1>
-      <p class="lead">ทุกภาพในหน้านี้ ชาวบ้านถ่ายและส่งมาเองจากแปลงของตัวเอง เรียงจากล่าสุด แตะรูปเพื่อดูเต็มจอ หรือแตะชื่อเพื่อไปที่แปลงบนแผนที่</p>
+      <p class="label" id="area-name" data-t="stories.label">บันทึกความเปลี่ยนแปลงของชุมชน</p>
+      <h1 class="title"><span data-t="stories.title">เรื่องเล่า</span><em data-t="stories.title_em">จากชาวบ้าน</em></h1>
+      <p class="lead" data-t="stories.lead">ทุกภาพในหน้านี้ ชาวบ้านถ่ายและส่งมาเองจากแปลงของตัวเอง เรียงจากล่าสุด แตะรูปเพื่อดูเต็มจอ หรือแตะชื่อเพื่อไปที่แปลงบนแผนที่</p>
       <div class="story-tools">
-        <div class="chips" id="use-chips" role="group" aria-label="กรองตามการใช้ที่ดิน"></div>
+        <div class="chips" id="use-chips" role="group" aria-label="กรองตามการใช้ที่ดิน" data-t-aria-label="stories.filter_aria"></div>
         <label class="search small">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-          <input id="q" type="search" placeholder="ค้นหาคำเล่า ชื่อคน หรือแปลง" autocomplete="off">
+          <input id="q" type="search" placeholder="ค้นหาคำเล่า ชื่อคน หรือแปลง" data-t-placeholder="stories.search" autocomplete="off">
         </label>
       </div>
     </div>
@@ -38,10 +60,10 @@
   <footer class="site-footer footer-simple">
     <div class="wrap footer-grid">
       <div>
-        <strong id="footer-name">ชุมชนบ้านสบปืน</strong>
-        <p>รูปและคำบรรยายเป็นของชาวบ้านผู้ส่ง</p>
+        <strong id="footer-name" data-t="site.community">ชุมชนบ้านสบปืน</strong>
+        <p data-t="site.photo_rights">รูปและคำบรรยายเป็นของชาวบ้านผู้ส่ง</p>
       </div>
-      <p class="credits"><a data-link="map.html">ดูทุกแปลงบนแผนที่ →</a></p>
+      <p class="credits"><a data-link="map.html" data-t="stories.footer_link">ดูทุกแปลงบนแผนที่ →</a></p>
     </div>
   </footer>
 

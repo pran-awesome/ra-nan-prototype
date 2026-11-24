@@ -3,6 +3,56 @@
 (() => {
   const cfg = window.RANAN_CONFIG;
 
+  // ---------- ข้อความบนเว็บ: อ่านจาก content/text.txt (แก้ข้อความที่ไฟล์นั้น ไม่ต้องแตะโค้ด) ----------
+  // รูปแบบ: [หัวข้อ] แล้วตามด้วย ชื่อ = ข้อความ, # คือหมายเหตุ, \n คือขึ้นบรรทัดใหม่
+  let TEXT = {};
+  function parseText(src) {
+    const out = {};
+    let section = "";
+    for (const raw of src.replace(/^﻿/, "").split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const head = line.match(/^\[(.+)\]$/);
+      if (head) { section = head[1].trim(); continue; }
+      const i = line.indexOf("=");
+      if (i < 1) continue;
+      const key = line.slice(0, i).trim();
+      out[section ? `${section}.${key}` : key] = line.slice(i + 1).trim().replace(/\\n/g, "\n");
+    }
+    return out;
+  }
+  // t("map.found", { n: 3 }) -> "พบ 3 แปลง"; ถ้าไม่มีในไฟล์จะคืนชื่อ key ให้เห็นว่าขาด
+  function t(key, vars) {
+    let s = TEXT[key];
+    if (s == null) { console.warn(`text.txt ไม่มี "${key}"`); return key; }
+    if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+    return s;
+  }
+  // ใส่ข้อความตาม \n เป็นบรรทัดใหม่ (ใช้ textContent เสมอ ไม่ตีความ HTML)
+  function setText(node, s) {
+    const parts = s.split("\n");
+    node.replaceChildren();
+    parts.forEach((p, i) => { if (i) node.append(document.createElement("br")); node.append(p); });
+  }
+  // HTML: data-t="key" = เนื้อหา, data-t-placeholder / data-t-aria-label / data-t-title = attribute
+  const T_ATTRS = ["placeholder", "aria-label", "title", "alt"];
+  function applyText(root = document) {
+    root.querySelectorAll("[data-t]").forEach((n) => { if (TEXT[n.dataset.t] != null) setText(n, TEXT[n.dataset.t]); });
+    for (const a of T_ATTRS)
+      root.querySelectorAll(`[data-t-${a}]`).forEach((n) => {
+        const k = n.getAttribute(`data-t-${a}`);
+        if (TEXT[k] != null) n.setAttribute(a, TEXT[k]);
+      });
+  }
+  const ready = fetch("content/text.txt", { cache: "no-cache" })
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`content/text.txt: HTTP ${r.status}`))))
+    .then((src) => { TEXT = parseText(src); })
+    .catch((err) => console.error("โหลดข้อความไม่สำเร็จ ใช้ข้อความสำรองใน HTML", err))
+    .then(() => {
+      applyText();
+      document.documentElement.classList.remove("t-loading");
+    });
+
   // สีโทนดินและพืช ให้เข้ากับพื้นครีมของเว็บ และยังเห็นชัดบนภาพดาวเทียม
   const LAND_USE = {
     "นา": { color: "#f2cf3d" },
@@ -61,7 +111,7 @@
         fetchView("public_reports", "select=id,image_url,caption,address,latitude,longitude,created_at,plot_id,own_location,stack_started_at&order=created_at.desc"),
       ]);
       const area = areas[0];
-      if (!area) throw new Error("ยังไม่มีพื้นที่ที่เปิดใช้งาน");
+      if (!area) throw new Error(t("site.no_area"));
       const plotById = new Map(plots.map((p) => [p.id, p]));
       const byPlot = new Map(plots.map((p) => [p.id, []]));
       for (const r of reports) if (byPlot.has(r.plot_id)) byPlot.get(r.plot_id).push(r);
@@ -146,7 +196,7 @@
 
   const formatNum = (n, digits = 0) => Number(n).toLocaleString("th-TH", { maximumFractionDigits: digits });
 
-  const plotTitle = (p) => p.name || (p.villagers.length ? `แปลงของ${displayName(p.villagers[0])}` : `แปลง ${p.code}`);
+  const plotTitle = (p) => p.name || (p.villagers.length ? t("card.plot_of", { name: displayName(p.villagers[0]) }) : t("card.plot_code", { code: p.code }));
   const peopleLabel = (p) => p.villagers.map(displayName).join(", ");
 
   function bboxOf(geojson) {
@@ -206,15 +256,15 @@
     if (!nav) return;
     const q = cfg.useSampleData ? "?sample" : "";
     const links = [
-      ["index.html", "หน้าแรก", "home"],
-      ["map.html", "แผนที่ชุมชน", "map"],
-      ["stories.html", "เรื่องเล่า", "stories"],
+      ["index.html", t("nav.home"), "home"],
+      ["map.html", t("nav.map"), "map"],
+      ["stories.html", t("nav.stories"), "stories"],
     ];
     const brand = el("a", "brand");
     brand.href = "index.html" + q;
-    brand.setAttribute("aria-label", "บ้านสบปืน หน้าแรก");
+    brand.setAttribute("aria-label", t("nav.brand_aria"));
     const words = el("span", "brand-text");
-    words.append(el("b", null, "Smart Soppuen"), el("small", null, "บ้านสบปืน · น่าน"));
+    words.append(el("b", null, t("nav.brand_name")), el("small", null, t("nav.brand_sub")));
     const mark = el("span", "brand-mark");
     const logo = document.createElement("img");
     logo.src = "assets/logo-mark.png";
@@ -230,14 +280,19 @@
       ul.append(a);
     }
     const menu = el("button", "nav-menu");
-    menu.setAttribute("aria-label", "เมนู");
+    menu.setAttribute("aria-label", t("nav.menu_aria"));
     menu.setAttribute("aria-expanded", "false");
     menu.setAttribute("aria-controls", "nav-links");
     menu.append(el("span"), el("span"));
-    menu.onclick = () => {
-      const open = nav.classList.toggle("open");
+    // มือถือ: เปิดเมนูแล้วล็อกหน้าข้างหลังไม่ให้เลื่อน (หน้าแรกจะได้ไม่เล่นฉากเลื่อนอยู่ใต้เมนู)
+    const setOpen = (open) => {
+      nav.classList.toggle("open", open);
       menu.setAttribute("aria-expanded", String(open));
+      document.body.classList.toggle("no-scroll", open);
     };
+    menu.onclick = () => setOpen(!nav.classList.contains("open"));
+    // หมุนจอ/ขยายหน้าต่างจนเมนูแบบเต็มจอหายไป: ปิดเมนูให้ด้วย ไม่งั้นหน้ายังล็อกอยู่
+    matchMedia("(max-width: 760px)").addEventListener?.("change", (e) => !e.matches && setOpen(false));
     nav.replaceChildren(brand, ul, menu);
     const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 24);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -261,11 +316,11 @@
     const picture = el("img", "lb-img");
     const meta = el("div", "lb-meta");
     const close = el("button", "lb-close", "×");
-    close.setAttribute("aria-label", "ปิด");
+    close.setAttribute("aria-label", t("lightbox.close"));
     const prev = el("button", "lb-nav prev", "‹");
     const next = el("button", "lb-nav next", "›");
-    prev.setAttribute("aria-label", "รูปก่อนหน้า");
-    next.setAttribute("aria-label", "รูปถัดไป");
+    prev.setAttribute("aria-label", t("lightbox.prev"));
+    next.setAttribute("aria-label", t("lightbox.next"));
     stage.append(picture);
     box.append(stage, meta, close);
     if (photos.length > 1) box.append(prev, next);
@@ -273,7 +328,7 @@
     const show = () => {
       const p = photos[i];
       picture.src = p.image_url;
-      picture.alt = p.caption || "รูปจากชาวบ้าน";
+      picture.alt = p.caption || t("card.photo_alt");
       meta.replaceChildren();
       if (p.caption) meta.append(el("p", "lb-caption", p.caption));
       const line = [context, formatDate(p.created_at), photos.length > 1 ? `${i + 1} / ${photos.length}` : null].filter(Boolean).join(" · ");
@@ -309,9 +364,9 @@
   function storyCard(s, { large = false } = {}) {
     const card = el("article", `story-card${large ? " large" : ""}`);
     const media = el("button", `story-media n${Math.min(s.photos.length, 4)}`);
-    media.setAttribute("aria-label", "ดูรูปเต็มจอ");
+    media.setAttribute("aria-label", t("card.view_full"));
     s.photos.slice(0, 4).forEach((p, idx) => {
-      const im = img(p.image_url, p.caption || "รูปจากชาวบ้าน");
+      const im = img(p.image_url, p.caption || t("card.photo_alt"));
       im.onclick = (e) => { e.stopPropagation(); openLightbox(s.photos, idx, s.plot ? plotTitle(s.plot) : ""); };
       media.append(im);
     });
@@ -325,27 +380,27 @@
 
     const body = el("div", "story-body");
     body.append(el("time", "story-date", `${formatDay(s.started)} · ${timeAgo(s.latest)}`));
-    body.append(el("p", s.caption ? "story-caption" : "story-caption muted", s.caption || `${s.photos.length} รูปจากแปลงนี้`));
+    body.append(el("p", s.caption ? "story-caption" : "story-caption muted", s.caption || t("card.photos_from_plot", { n: s.photos.length })));
     if (s.plot) {
       const who = el("a", "story-who");
       who.href = link(`map.html#plot=${encodeURIComponent(s.plot.code)}`);
       if (s.plot.villagers.length) who.append(facesEl(s.plot.villagers, 2));
-      const t = el("span", "who-text");
-      t.append(el("strong", null, peopleLabel(s.plot) || plotTitle(s.plot)), el("span", null, `${plotTitle(s.plot)} · ดูบนแผนที่ →`));
-      who.append(t);
+      const wt = el("span", "who-text");
+      wt.append(el("strong", null, peopleLabel(s.plot) || plotTitle(s.plot)), el("span", null, t("card.see_on_map", { plot: plotTitle(s.plot) })));
+      who.append(wt);
       body.append(who);
     }
     card.append(media, body);
     return card;
   }
 
-  function showError(msg) {
-    const e = el("div", "toast-error", msg);
+  function showError(err) {
+    const e = el("div", "toast-error", t("site.load_error", { error: err?.message || err }));
     document.body.append(e);
   }
 
   window.RN = {
-    cfg, LAND_USE, landUseColor, landUseIcon, loadAll, el, img, avatarEl, facesEl, displayName,
+    ready, t, applyText, cfg, LAND_USE, landUseColor, landUseIcon, loadAll, el, img, avatarEl, facesEl, displayName,
     formatDate, formatDay, timeAgo, formatNum, plotTitle, peopleLabel, bboxOf, centerOf, mapStyle,
     renderNav, link, openLightbox, storyCard, showError,
   };

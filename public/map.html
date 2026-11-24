@@ -1,8 +1,30 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" class="t-loading">
+<!--
+  ========================================================================
+  แก้ "ข้อความ" ในหน้านี้ที่ไฟล์   content/text.txt   (ไม่ใช่ไฟล์นี้)
+  ========================================================================
+  ตัวหนังสือบนเว็บเกือบทั้งหมดถูกดึงมาจาก content/text.txt ไม่ใช่จาก HTML ตรงนี้
+
+  กฎที่ต้องรู้ก่อนแก้ไฟล์นี้:
+    1. element ที่มี data-t="ชื่อ" , data-t-placeholder="ชื่อ" ,
+       data-t-aria-label="ชื่อ" หรือ data-t-title="ชื่อ"
+       -> ข้อความที่เห็นในไฟล์นี้เป็นแค่ "ค่าสำรอง" เผื่อ JS โหลดไม่ทัน
+       -> แก้ข้อความจริงที่  content/text.txt  โดยหาบรรทัดชื่อนั้น (เช่น [home] ... ชื่อ = ...)
+       -> ห้ามแก้ข้อความตรงนี้เฉย ๆ เพราะมันจะไม่ขึ้นจริง (จะถูก JS เขียนทับด้วยค่าจาก text.txt เสมอ)
+    2. จะเพิ่มข้อความใหม่ตรงไหนในหน้านี้ ให้ใส่ data-t="หมวด.ชื่อ" กับ element นั้น
+       แล้วไปเพิ่มบรรทัด  ชื่อ = ข้อความ  ในหมวดที่ตรงกันของ content/text.txt ด้วย
+       (ห้ามพิมพ์ข้อความภาษาไทยลอย ๆ ลงในไฟล์ .html โดยไม่มี data-t)
+    3. ชื่อแปลง/ชื่อชาวบ้าน/รูปถ่าย/คำบรรยายรูป/ประเภทที่ดิน ไม่ได้อยู่ในไฟล์ไหนเลย
+       เพราะมันมาจากฐานข้อมูลสด (Supabase) ผ่านหน้า /admin/ -> อย่าพยายามแก้ตรงนี้
+    4. <title> ด้านล่าง กับ <meta name="description">/<meta property="og:..."> คือ 2 จุดที่
+       "ไม่ได้" ถูก JS เขียนทับ (โปรแกรมแชร์ลิงก์ของ LINE/Facebook อ่านมันตรง ๆ โดยไม่รัน JS)
+       ถ้าจะเปลี่ยนต้องแก้ตรงนี้เลย ที่อื่นในไฟล์ห้ามแก้
+-->
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- ชื่อแท็บเบราว์เซอร์ + ข้อความตอนแชร์ลิงก์: แก้ตรงนี้ได้เลย ไม่ได้อยู่ใน content/text.txt -->
   <title>แผนที่ชุมชน · บ้านสบปืน</title>
   <meta name="description" content="แผนที่ดาวเทียมแปลงที่ดินและรูปเล่าเรื่องจากชาวบ้านสบปืน">
   <meta name="theme-color" content="#f7f5ee">
@@ -19,25 +41,25 @@
 
   <main class="explorer">
     <aside class="panel" id="panel" data-state="peek">
-      <button class="panel-grip" id="panel-grip" aria-label="ขยายหรือย่อรายการ"><span></span></button>
+      <button class="panel-grip" id="panel-grip" aria-label="ขยายหรือย่อรายการ" data-t-aria-label="map.grip_aria"><span></span></button>
 
       <div class="panel-view" id="list-view">
         <div class="panel-head">
-          <p class="kicker" id="area-name">กำลังโหลด…</p>
-          <h1 class="panel-title">แปลงในชุมชน</h1>
+          <p class="kicker" id="area-name" data-t="map.loading">กำลังโหลด…</p>
+          <h1 class="panel-title" data-t="map.title">แปลงในชุมชน</h1>
           <p class="panel-sub" id="summary"></p>
           <label class="search">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-            <input id="q" type="search" placeholder="ค้นหาชื่อแปลง รหัส หรือชื่อชาวบ้าน" autocomplete="off">
+            <input id="q" type="search" placeholder="ค้นหาชื่อแปลง รหัส หรือชื่อชาวบ้าน" data-t-placeholder="map.search" autocomplete="off">
           </label>
-          <div class="chips" id="use-chips" role="group" aria-label="กรองตามการใช้ที่ดิน"></div>
+          <div class="chips" id="use-chips" role="group" aria-label="กรองตามการใช้ที่ดิน" data-t-aria-label="map.filter_aria"></div>
           <div class="sort-row">
             <span id="result-count"></span>
-            <select id="sort" aria-label="เรียงลำดับ">
-              <option value="recent">รูปล่าสุดก่อน</option>
-              <option value="photos">รูปมากที่สุด</option>
-              <option value="size">แปลงใหญ่ที่สุด</option>
-              <option value="name">ชื่อ ก-ฮ</option>
+            <select id="sort" aria-label="เรียงลำดับ" data-t-aria-label="map.sort_aria">
+              <option value="recent" data-t="map.sort_recent">รูปล่าสุดก่อน</option>
+              <option value="photos" data-t="map.sort_photos">รูปมากที่สุด</option>
+              <option value="size" data-t="map.sort_size">แปลงใหญ่ที่สุด</option>
+              <option value="name" data-t="map.sort_name">ชื่อ ก-ฮ</option>
             </select>
           </div>
         </div>
@@ -45,7 +67,7 @@
       </div>
 
       <div class="panel-view" id="detail-view" hidden>
-        <button class="back" id="back">← แปลงทั้งหมด</button>
+        <button class="back" id="back" data-t="map.back">← แปลงทั้งหมด</button>
         <div id="detail"></div>
       </div>
     </aside>
@@ -53,8 +75,8 @@
     <section class="map-stage">
       <div id="map"></div>
       <div class="map-tools">
-        <button class="tool" id="toggle-3d" aria-pressed="false" title="มุมมอง 3 มิติ">3D</button>
-        <button class="tool" id="fit-area" title="ดูทั้งชุมชน">
+        <button class="tool" id="toggle-3d" aria-pressed="false" title="มุมมอง 3 มิติ" data-t-title="map.tool_3d_title" data-t="map.tool_3d">3D</button>
+        <button class="tool" id="fit-area" title="ดูทั้งชุมชน" data-t-title="map.tool_fit_title">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
         </button>
       </div>

@@ -1,6 +1,7 @@
 // หน้าเรื่องเล่า: ทุกชุดรูปเรียงจากล่าสุด แบ่งหัวข้อตามเดือน กรองตามการใช้ที่ดินและค้นหาคำได้
-(() => {
-  const { el, link, loadAll, landUseColor, landUseIcon, storyCard, plotTitle, peopleLabel } = RN;
+// รอโหลด content/text.txt ก่อน แล้วค่อยสร้างหน้า
+RN.ready.then(() => {
+  const { t, el, link, loadAll, landUseColor, landUseIcon, storyCard, plotTitle, peopleLabel } = RN;
   RN.renderNav("stories");
   document.querySelectorAll("[data-link]").forEach((a) => (a.href = link(a.dataset.link)));
 
@@ -19,7 +20,7 @@
       b.onclick = () => { state.use = state.use === key && key !== "all" ? "all" : key; renderChips(); render(); };
       box.append(b);
     };
-    chip("all", "ทั้งหมด");
+    chip("all", t("stories.all"));
     for (const [k] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, k, landUseColor(k));
     box.hidden = counts.size < 2;
   }
@@ -39,17 +40,17 @@
     if (!data.stacks.length) {
       const empty = el("div", "empty-hero");
       empty.append(
-                el("h3", null, "ยังไม่มีเรื่องเล่า"),
-        el("p", null, "เรื่องแรกจะมาจากชาวบ้านสบปืนเอง เมื่อมีคนส่งรูปผ่าน LINE ของชุมชน ภาพจะขึ้นที่นี่และบนแผนที่ทันที"),
+        el("h3", null, t("stories.empty_title")),
+        el("p", null, t("stories.empty_text")),
       );
-      const a = el("a", "btn btn-primary", "ไปดูแผนที่หมู่บ้าน →");
+      const a = el("a", "btn btn-primary", t("stories.empty_button"));
       a.href = link("map.html");
       empty.append(a);
       feed.append(empty);
       return;
     }
     if (!list.length) {
-      feed.append(el("p", "empty-note center", "ไม่พบเรื่องเล่าที่ตรงกับคำค้น"));
+      feed.append(el("p", "empty-note center", t("stories.no_match")));
       return;
     }
     // หัวข้อตามเดือน แล้วการ์ดแบบ masonry
@@ -73,11 +74,12 @@
       data = d;
       document.getElementById("area-name").textContent = data.area.name;
       document.getElementById("footer-name").textContent = data.areaTitle;
+      document.title = t("stories.page_title", { name: data.areaTitle.replace(/^ชุมชน/, "") });
       renderChips();
       render();
     })
     .catch((err) => {
       console.error(err);
-      RN.showError(`โหลดข้อมูลไม่สำเร็จ: ${err.message}`);
+      RN.showError(err);
     });
-})();
+});

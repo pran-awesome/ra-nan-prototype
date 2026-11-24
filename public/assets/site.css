@@ -15,6 +15,11 @@
   --yellow: #ffe900;
   --sky: #92d5f2;
   --r: 18px;
+  --r-sm: 12px;
+  --shadow-1: 0 1px 2px rgba(29, 29, 27, .06), 0 4px 14px rgba(29, 29, 27, .06);
+  --shadow-2: 0 2px 6px rgba(29, 29, 27, .08), 0 18px 40px -12px rgba(29, 29, 27, .22);
+  --shadow-map: 0 2px 12px rgba(0, 0, 0, .22);
+  --ease: cubic-bezier(.2, .7, .2, 1);
   --sans: "Anuphan", "IBM Plex Sans Thai", system-ui, sans-serif;
   --serif: "Trirong", "Noto Serif Thai", Georgia, serif;
   --nav-h: 76px;
@@ -24,8 +29,18 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* ซ่อนหน้าไว้จนโหลด content/text.txt เสร็จ (กันข้อความกระพริบ) ถ้าช้าเกิน 2 วินาทีให้แสดงอยู่ดี */
+.t-loading body { visibility: hidden; animation: t-show 0s 2s forwards; }
+@keyframes t-show { to { visibility: visible; } }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body { margin: 0; font-family: var(--sans); font-size: 16px; color: var(--ink); background: var(--cream); line-height: 1.7; overflow-x: hidden; }
+body {
+  margin: 0; font-family: var(--sans); font-size: 16px; color: var(--ink); background: var(--cream); line-height: 1.7; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+}
+/* ลิงก์ #anchor ไม่จมใต้แถบเมนู */
+[id] { scroll-margin-top: calc(var(--nav-h) + 12px); }
+h1, h2, h3, .title, .d-title { text-wrap: balance; }
+p, .lead, blockquote { text-wrap: pretty; }
 body.no-scroll { overflow: hidden; }
 img { max-width: 100%; display: block; }
 a { color: inherit; }
@@ -36,7 +51,10 @@ button { font: inherit; color: inherit; }
 .center { text-align: center; }
 
 /* ---------------- ตัวอักษร ---------------- */
-.label { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .08em; color: var(--taupe); }
+/* ภาษาไทยไม่ควรเว้นระยะตัวอักษรกว้าง (สระ/วรรณยุกต์จะลอย) ใช้เส้นสั้นนำหน้าแทนเพื่อให้ดูเป็นป้ายหัวข้อ */
+.label { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: .02em; color: var(--taupe); display: inline-flex; align-items: center; gap: 10px; }
+.label::before { content: ""; width: 22px; height: 1.5px; background: var(--green); flex: 0 0 auto; }
+.land-head .label, .welcome-inner > .label { justify-content: center; }
 .title { margin: 0; font-weight: 400; font-size: clamp(34px, 4.4vw, 58px); line-height: 1.16; letter-spacing: -.005em; }
 .title em, .hero-title .italic, .cta-inner h2 em { font-family: var(--serif); font-style: italic; font-weight: 300; }
 .title em { display: block; color: var(--forest); }
@@ -47,12 +65,17 @@ button { font: inherit; color: inherit; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; border-radius: 999px;
   font-weight: 500; font-size: 15px; letter-spacing: .01em; text-decoration: none; border: 1px solid transparent; cursor: pointer;
-  transition: background .25s ease, color .25s ease, border-color .25s ease;
+  transition: background .25s ease, color .25s ease, border-color .25s ease, transform .25s var(--ease), box-shadow .25s ease;
 }
-.btn-yellow { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
+.btn::after { content: "→"; display: inline-block; transition: transform .25s var(--ease); }
+.btn:hover::after { transform: translateX(4px); }
+.btn:active { transform: translateY(1px); }
+.btn-yellow { background: var(--yellow); color: var(--ink); border-color: var(--yellow); box-shadow: 0 8px 24px -8px rgba(255, 233, 0, .55); }
 .btn-yellow:hover { background: var(--paper); border-color: var(--paper); }
 .btn-line { border-color: var(--ink); color: var(--ink); background: transparent; }
 .btn-line:hover { background: var(--ink); color: var(--cream); }
+.btn-primary { background: var(--forest); color: var(--cream); border-color: var(--forest); }
+.btn-primary:hover { background: var(--ink); border-color: var(--ink); }
 .text-link { font-weight: 500; font-size: 15px; text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1px; white-space: nowrap; }
 .text-link:hover { color: var(--green); }
 
@@ -60,10 +83,17 @@ button { font: inherit; color: inherit; }
 .site-nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: var(--nav-h);
   display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 var(--gutter);
-  transition: background .3s ease, color .3s ease, box-shadow .3s ease;
+  transition: background .3s ease, color .3s ease, box-shadow .3s ease, transform .35s ease;
 }
+/* หน้าแรก: เลื่อนลงแล้วแถบเมนูหลบขึ้นไป (home.js) ยกเว้นตอนเปิดเมนูหรือกด Tab เข้ามาในเมนู */
+.site-nav.nav-hidden:not(.open):not(:focus-within) { transform: translateY(calc(-100% - 2px)); }
 .site-nav.on-dark { color: #fff; }
+.site-nav.on-dark:not(.scrolled):not(.open) { text-shadow: 0 1px 12px rgba(0, 0, 0, .35); }
 .site-nav.on-dark.scrolled, .site-nav.solid, .site-nav.open { background: var(--cream); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
+/* ตอนเปิดเมนูมือถือไม่ใช้ backdrop-filter: มันทำให้รายการเมนู (position: fixed) ไปยึดกับแถบเมนูแทนจอ จนแผงเมนูหดเหลือนิดเดียว */
+@supports (backdrop-filter: blur(1px)) {
+  .site-nav.on-dark.scrolled:not(.open), .site-nav.solid:not(.open) { background: rgba(247, 245, 238, .82); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); }
+}
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .brand-mark {
   width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: 0 0 auto;
@@ -78,7 +108,7 @@ button { font: inherit; color: inherit; }
 .nav-links a { text-decoration: none; font-size: 14.5px; font-weight: 500; letter-spacing: .03em; padding: 6px 0; position: relative; }
 .nav-links a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .3s ease; }
 .nav-links a:hover::after, .nav-links a.active::after { transform: scaleX(1); }
-.nav-menu { display: none; width: 46px; height: 46px; border: 1px solid currentColor; background: none; cursor: pointer; padding: 0; place-content: center; gap: 7px; }
+.nav-menu { display: none; width: 46px; height: 46px; border-radius: 50%; border: 1px solid currentColor; background: none; cursor: pointer; padding: 0; place-content: center; gap: 7px; }
 .nav-menu span { display: block; width: 20px; height: 1.5px; background: currentColor; transition: transform .3s ease; }
 .open .nav-menu span:first-child { transform: translateY(4.25px) rotate(45deg); }
 .open .nav-menu span:last-child { transform: translateY(-4.25px) rotate(-45deg); }
@@ -96,27 +126,137 @@ button { font: inherit; color: inherit; }
   .nav-links a.active { color: var(--forest); }
 }
 
+/* ---------------- หน้าแรก: หน้าโหลด ---------------- */
+/* .is-loading (ตั้งใน <head>, home.js เอาออกเมื่อพร้อม): ปิดหน้าด้วยพื้นเข้มสีเดียวกับฉากเปิด + ล็อกการเลื่อน
+   แถบเหลืองยาวขึ้นตามงานที่โหลดเสร็จ (home.js) เอาออกแล้วจางหายเผยฉากเปิด */
+.boot {
+  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #1e2a1f; color: #fff;
+  visibility: visible; touch-action: none; transition: opacity .7s ease, visibility 0s linear 0s;
+}
+html:not(.is-loading) .boot { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .7s ease, visibility 0s linear .7s; }
+.is-loading body { overflow: hidden; }
+/* อนิเมชันขึ้นของข้อความฉากเปิดรอจนหน้าโหลดหายก่อน */
+.is-loading .reveal { animation-play-state: paused; }
+.boot-inner { display: grid; justify-items: center; gap: 18px; padding: 20px; text-align: center; }
+.boot-name { margin: 0; font-weight: 500; font-size: clamp(40px, 7vw, 84px); line-height: 1.1; letter-spacing: -.01em; }
+.boot-bar { width: min(220px, 60vw); height: 2px; background: rgba(255, 255, 255, .18); border-radius: 2px; overflow: hidden; }
+.boot-bar span { display: block; height: 100%; background: var(--yellow); transform: scaleX(.04); transform-origin: 0 50%; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.boot-note { margin: 0; font-size: 13.5px; letter-spacing: .03em; opacity: .6; }
+
 /* ---------------- หน้าแรก: ฉากเปิด ---------------- */
+.hero-track { position: relative; }
 .hero { position: relative; height: 100svh; min-height: 600px; overflow: hidden; background: #1e2a1f; color: #fff; }
-.hero-map { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; }
-.hero.map-ready .hero-map { opacity: 1; }
+.hero-map { position: absolute; left: 0; right: 0; top: 0; height: 100svh; min-height: 600px; z-index: 1; opacity: 0; transition: opacity 1.2s ease; background: #1e2a1f; }
+.hero-track.map-ready .hero-map { opacity: 1; }
 .hero-map .maplibregl-canvas { outline: none; }
+/* มี JS: แผนที่เป็นชั้นลอยเต็มจอ ข้อความฉากเปิดเลื่อนขึ้นตามปกติโดยแผนที่ข้างหลังอยู่นิ่ง
+   พอข้อความพ้นจอ รั้งแผนที่เปล่าไว้อีกระยะ (.hero-pause) ระหว่างนั้นบล็อกถัดไปเลื่อนขึ้นมาใต้แผนที่จนกรอบอยู่กลางจอ */
+.hero-pause { display: none; }
+.hero-fx .hero-pause { display: block; height: 60svh; }
+/* .hero ไม่มี z-index: พื้นสีเข้มของมันอยู่ใต้แผนที่ ส่วนตัวหนังสือ (z-index 2) อยู่เหนือแผนที่
+   ม่านเงาตรึงไว้กับจอเหมือนแผนที่ แล้วจางออกตอนเลื่อน (ไม่งั้นขอบล่างของเงาจะเลื่อนขึ้นมาให้เห็น) */
+.hero-fx .hero-shade { position: fixed; }
+/* ย่อเสร็จแล้วกั๊กกรอบภาพดาวเทียมไว้กลางจออีกระยะเลื่อนเท่านี้ (ความสูงของ ::after) ก่อนปล่อยให้เลื่อนต่อ
+   .welcome ติดแบบ sticky อยู่ในกล่องนี้ ส่วน top ตั้งจาก home.js ให้ติดพอดีตอนกรอบอยู่กลางจอ */
+.hero-fx .welcome { position: sticky; }
+/* ระยะเลื่อนตอนบล็อกติดอยู่ (ตัวเลขมาก = ช้าลง/นานขึ้น)
+   .hold-shrink: แผนที่ย่อเข้าหากลางจอลงกรอบภาพดาวเทียมที่ติดนิ่งอยู่  .hold-stay: กั๊กกรอบไว้ก่อนปล่อย
+   .to-land (จาก home.js): ระหว่างกั๊ก กรอบเลื่อนหลบ (จอกว้าง .side ไปซ้าย / จอแคบ .stack ขึ้นบน) ข้อความพิมพ์ขึ้นข้าง ๆ หรือใต้กรอบ จึงกั๊กนานกว่า
+   (จอเตี้ยจนวางกรอบ + ข้อความในจอเดียวไม่ได้ เช่นมือถือแนวนอน: ไม่มี .to-land ข้อความอยู่ใต้กรอบตามปกติ) */
+.hold-shrink, .hold-stay { display: none; }
+.hero-fx .hold-shrink { display: block; height: 90svh; }
+.hero-fx .hold-stay { display: block; height: 55svh; }
+.hero-fx .welcome-hold.to-land .hold-stay { height: 110svh; }
+/* .to-land: หลังกั๊ก ข้อความจางหาย + ภาพในกรอบขยายเป็นเต็มจอ (#land-bg) ในระยะเลื่อนเท่านี้ */
+.hold-expand { display: none; }
+.hero-fx .welcome-hold.to-land .hold-expand { display: block; height: 80svh; }
+.hero-fx .page-home .welcome-hold.side .welcome .welcome-inner > .label { opacity: calc(1 - var(--clear, 0)); transition: none; }
+.hero-fx .welcome-hold.to-land .ghost-word, .hero-fx .welcome-hold.to-land .frame-cap { opacity: calc(1 - var(--clear, 0)); }
+/* ภาพดาวเทียมลอยตรึงจอ: ขยายจากกรอบเป็นเต็มจอ แล้วเป็นพื้นหลังใต้บล็อก "ดินแต่ละผืน"
+   บล็อกนั้นกับบล็อกถัด ๆ ไปยกขึ้นเหนือภาพ (z-index 2) ส่วนบล็อกยินดีต้อนรับจมอยู่ใต้ภาพ */
+.land-bg { display: none; }
+/* สูง 100lvh เท่ากับ .land-stage (ภาพเดียวกัน ขนาดเดียวกัน) ตอนสลับเป็นหน้าธรรมดาจึงไม่เห็นรอยต่อ */
+.hero-fx .welcome-hold.to-land ~ .land-bg {
+  display: block; position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: 1; visibility: hidden; transform-origin: 0 0; will-change: transform, clip-path;
+  background: #1e2a1f var(--land-img, none) center / cover no-repeat;
+}
+.hero-fx .welcome-hold.to-land ~ .land-bg.on { visibility: visible; }
+.land-bg::after { content: ""; position: absolute; inset: 0; background: var(--land-shade); opacity: var(--shade, 0); }
+.hero-fx .welcome-hold.to-land ~ :is(section, footer) { position: relative; z-index: 2; }
+.hero-fx .welcome-hold.to-land ~ .land { background: transparent; }
+/* ระหว่างนี้แผนที่คือ #land-bg ด้านหลัง: .land-stage เหลือแค่ชั้นสีขาวตอนท้ายบล็อก (ไม่มีภาพ ไม่มีม่านเงาซ้ำ) */
+.hero-fx .welcome-hold.to-land ~ .land .land-stage { background: none; }
+.hero-fx .welcome-hold.to-land ~ .land .land-stage::before { display: none; }
+/* เลย์เอาต์กรอบซ้าย-ข้อความขวา ใช้ต่อหลังฉากเปิดจบแล้ว (home.js เอา .hero-fx ออก เป็นหน้าธรรมดา) */
+.welcome-hold.side .welcome-frame { transform-origin: 0 50%; will-change: transform; }
+.page-home .welcome-hold.side .welcome .welcome-inner > .label { transition: opacity .9s ease; }
+.page-home .welcome-hold.side .welcome .welcome-inner > .welcome-text {
+  position: absolute; left: var(--side-left, 60%); top: var(--side-top, 0); width: var(--side-w, 40%); height: var(--side-h, auto);
+  max-width: none; margin: 0; text-align: left; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  opacity: calc(var(--side-op, 0) * (1 - var(--clear, 0))); transform: none; transition: none;
+}
+.welcome-hold:is(.side, .stack) .tw-rest { visibility: hidden; }
+/* จอกว้าง: ตัวเลขสรุปอยู่ใต้ข้อความในคอลัมน์ขวา (2 x 2) ขึ้นหลังพิมพ์เสร็จ */
+.welcome-hold.side .welcome-text { font-size: clamp(15px, 1.25vw, 18px); }
+.welcome-text .stats { margin: 26px 0 0; grid-template-columns: 1fr 1fr; opacity: 0; transition: opacity .6s ease; }
+.welcome-text .stats.shown { opacity: 1; }
+.welcome-text .stats > div { padding: 12px 0 12px 16px; }
+.welcome-text .stats > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+.welcome-text .stats > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+.welcome-text .stats dd { font-size: clamp(30px, 3vw, 46px); }
+/* เลื่อนย้อนขึ้นก่อนกรอบเลื่อนไปซ้ายสุด: ค่อย ๆ เข้าที่เองแทนการผูกกับการเลื่อน */
+.welcome-hold.settle .welcome-frame { transition: transform .6s cubic-bezier(.2, .7, .2, 1), box-shadow .4s ease, outline-offset .4s var(--ease); }
+.page-home .welcome-hold.side.settle .welcome .welcome-inner > .label { transition: opacity .9s ease, transform .6s cubic-bezier(.2, .7, .2, 1); }
+.page-home .welcome-hold.side.settle .welcome .welcome-inner > .welcome-text { transition: opacity .6s ease; }
+/* จอแคบ (.stack จาก home.js) ระหว่างกั๊ก: กรอบย่อจากขอบบนกลางกรอบแล้วยกขึ้นไปด้านบนจอ หัวข้อจางหาย
+   ข้อความ + ตัวเลข (เรียงแถวเดียว 4 ช่อง) ลอยอยู่ใต้กรอบ ตำแหน่ง (--side-top) ตั้งจาก home.js ให้ทั้งหมดพอดีจอเดียว
+   จบฉากแล้วกลับเป็นเลย์เอาต์ปกติ (ข้อความอยู่ใต้กรอบตามลำดับ) */
+.welcome-hold:not(.side) .welcome-frame { transform-origin: 50% 0; }
+.hero-fx .welcome-hold.stack .welcome-frame { will-change: transform; }
+/* กรอบยกขึ้นเลยขอบบนของบล็อกได้ (จอสูง) จึงไม่ตัดขอบบนล่าง ตัดเฉพาะซ้ายขวา (คำใหญ่ด้านหลัง) */
+.hero-fx .welcome-hold.stack .welcome { overflow: visible; overflow-x: clip; }
+.hero-fx .page-home .welcome-hold.stack .welcome .welcome-inner > .label { opacity: calc(1 - var(--lift, 0)); transition: none; }
+.hero-fx .page-home .welcome-hold.stack .welcome .welcome-inner > .welcome-text {
+  position: absolute; left: 0; right: 0; top: var(--side-top, 0); max-width: 560px; margin: 0 auto;
+  font-size: clamp(15px, 2.2vw, 17px); line-height: 1.7; display: flex; flex-direction: column; gap: 2px;
+  opacity: calc(var(--side-op, 0) * (1 - var(--clear, 0))); transform: none; transition: none;
+}
+.hero-fx .welcome-hold.stack .welcome-text .strong { margin-top: 6px; }
+.hero-fx .welcome-hold.stack .welcome-text .stats { grid-template-columns: repeat(4, 1fr); margin: 18px 0 0; }
+.hero-fx .welcome-hold.stack .welcome-text .stats > div { padding: 10px 0 0 10px; border-top: 0; border-left: 1px solid var(--line); }
+.hero-fx .welcome-hold.stack .welcome-text .stats > div:first-child { padding-left: 0; border-left: 0; }
+.hero-fx .welcome-hold.stack .welcome-text .stats dt { font-size: 11.5px; line-height: 1.4; }
+.hero-fx .welcome-hold.stack .welcome-text .stats dd { font-size: clamp(24px, 7vw, 34px); }
+/* จอแคบ เลื่อนย้อนขึ้นระหว่างกั๊ก: กรอบค่อย ๆ กลับเต็มขนาด ข้อความกับตัวเลขค่อย ๆ ปรากฏที่ใต้กรอบ */
+.welcome-hold.settle:not(.side) :is(.welcome-text, .stats) { animation: fade .6s ease; }
+/* เคอร์เซอร์พิมพ์: ลอยอยู่ตรงจุดที่พิมพ์ถึง (position: absolute แบบไม่ตั้ง top/left) จึงไม่ดันตัดบรรทัด */
+.tw-caret { display: none; }
+.welcome-hold:is(.side, .stack) .tw-caret { display: inline; position: absolute; width: 2px; height: 1.15em; margin: .35em 0 0 1px; background: var(--green); animation: caret 1s steps(1) infinite; }
+.welcome-text.typing .tw-caret { animation: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* สูงเท่าจอตอนแถบที่อยู่ของเบราว์เซอร์มือถือหดแล้ว (lvh) ขนาดจึงไม่เปลี่ยนตอนแถบหด/ยืดระหว่างเลื่อน (แผนที่ไม่ต้องวาดใหม่ ไม่กระพริบ) */
+.hero-fx .hero-map { position: fixed; top: 0; left: 0; right: 0; bottom: auto; height: 100vh; height: 100lvh; min-height: 0; transform-origin: 0 0; will-change: transform, clip-path; }
+.hero-fx .hero-map.gone { visibility: hidden; }
+.hero-fx .mini-map { opacity: var(--handoff, 0); }
+.hero-shade, .hero-content, .hero-explore, .hero-coord { z-index: 2; }
 .hero-shade {
   position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(18, 22, 16, .45) 0%, rgba(18, 22, 16, 0) 22%, rgba(18, 22, 16, 0) 45%, rgba(18, 22, 16, .72) 100%);
 }
-.hero-content { position: absolute; left: var(--gutter); right: var(--gutter); bottom: clamp(72px, 13vh, 130px); max-width: 900px; }
-.hero-place { margin: 0 0 18px; font-size: 13px; font-weight: 500; letter-spacing: .12em; opacity: .85; }
-.hero-title { margin: 0; font-weight: 500; font-size: clamp(50px, 8.4vw, 128px); line-height: 1.08; letter-spacing: -.01em; }
-.hero-title > span { display: block; }
-.hero-title .italic { font-weight: 200; }
-.hero-note {
-  position: absolute; right: var(--gutter); bottom: clamp(72px, 13vh, 130px); width: 280px; padding: 20px 22px;
-  border: 1px solid rgba(255, 255, 255, .65); text-decoration: none; display: grid; gap: 4px; transition: background .25s ease, color .25s ease;
+.hero-content {
+  position: absolute; left: var(--gutter); bottom: clamp(72px, 13vh, 130px); max-width: calc(100% - 40px);
+  display: flex; flex-direction: column; align-items: flex-start;
 }
-.hero-note b { font-weight: 600; font-size: 13px; letter-spacing: .1em; }
-.hero-note span { font-size: 15px; line-height: 1.55; opacity: .9; }
-.hero-note:hover { background: #fff; color: var(--ink); }
+.hero-place { margin: 0 0 18px; font-size: 14px; font-weight: 500; letter-spacing: .03em; opacity: .9; display: inline-flex; align-items: center; gap: 10px; }
+.hero-place::before { content: ""; width: 28px; height: 1.5px; background: var(--yellow); }
+/* ชื่อหมู่บ้าน: ลบแล้วพิมพ์ใหม่ เปลี่ยนฟอนต์ไปเรื่อย ๆ (สูงคงที่ ไม่ให้หน้ากระตุกเวลาเปลี่ยนฟอนต์) */
+.hero-title {
+  margin: 0; font-weight: 500; font-size: clamp(60px, 12vw, 180px); line-height: 1; height: 1.35em; letter-spacing: -.01em;
+  display: flex; align-items: center; white-space: nowrap; text-shadow: 0 2px 30px rgba(0, 0, 0, .25);
+}
+.hero-title .caret { display: inline-block; width: .06em; height: .9em; margin-left: .08em; background: var(--yellow); animation: caret 1s steps(1) infinite; }
+.hero-title.typing .caret { animation: none; }
+@keyframes caret { 50% { opacity: 0; } }
 .hero-explore {
   position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); font-size: 11.5px; letter-spacing: .2em; text-decoration: none;
   display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: .85;
@@ -125,31 +265,95 @@ button { font: inherit; color: inherit; }
 @keyframes drip { from { background-position: 0 100%; } to { background-position: 0 -100%; } }
 .hero-coord { position: absolute; left: var(--gutter); bottom: 22px; margin: 0; font-size: 12px; letter-spacing: .14em; opacity: .6; font-variant-numeric: tabular-nums; white-space: pre; }
 
+/* ภาพจากชาวบ้านบนแผนที่ฉากเปิด (home.js): จุดบนแผนที่ -> เส้นลากออกไป -> การ์ดรูป ขยับตามแผนที่ที่หมุน
+   .hp วางที่จุดบนแผนที่ (transform จาก home.js) เส้นกับการ์ดวางห่างจากจุดนั้น
+   ขึ้น: จุดเด้ง เส้นวาดจากจุดไปหาการ์ด แล้วการ์ดเด้งออกจากปลายเส้น / ลง: การ์ดจาง เส้นหดกลับเข้าจุด จุดหาย */
+.hero-pins { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; --hp-w: 132px; }
+.hp { position: absolute; left: 0; top: 0; will-change: transform; }
+.hp-line { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
+.hp-line line {
+  stroke: rgba(255, 255, 255, .9); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, .55)); transition: stroke-dashoffset .32s cubic-bezier(.3, .7, .3, 1) .08s;
+}
+.hp.on .hp-line line { stroke-dashoffset: 0; }
+.hp.off .hp-line line { stroke-dashoffset: 1; transition-delay: .18s; }
+.hp-dot {
+  position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--c); border: 2px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .45); transform: scale(0); transition: transform .3s cubic-bezier(.3, 1.8, .5, 1);
+}
+.hp-dot::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid #fff; opacity: 0; }
+.hp.on .hp-dot { transform: scale(1); }
+.hp.on .hp-dot::after { animation: hp-ping 1.4s ease-out .1s infinite; }
+.hp.off .hp-dot { transform: scale(0); transition: transform .25s ease .4s; }
+@keyframes hp-ping { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(3.2); } }
+.hp-card {
+  position: absolute; width: var(--hp-w); margin: 0; padding: 4px; background: #fff; border-radius: 12px; color: var(--ink);
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .6); opacity: 0; transform: translateY(14px) scale(.8); transform-origin: 50% 100%;
+  transition: opacity .25s ease .3s, transform .5s cubic-bezier(.2, 1.4, .4, 1) .3s;
+}
+.hp.below .hp-card { transform: translateY(-14px) scale(.8); transform-origin: 50% 0; }
+.hp.on .hp-card { opacity: 1; transform: none; }
+.hp.off .hp-card { opacity: 0; transform: scale(.9); transition: opacity .25s ease, transform .3s ease; }
+.hp-card img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 9px; background: var(--cream-2); }
+.hp-card figcaption { padding: 6px 4px 2px; line-height: 1.3; }
+.hp-card strong { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hp-card span { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.hp-card span::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+@media (max-width: 560px) {
+  .hero-pins { --hp-w: 96px; }
+  .hp-card { padding: 3px; border-radius: 10px; }
+  .hp-card img { border-radius: 8px; }
+  .hp-card figcaption { padding: 4px 3px 1px; }
+  .hp-card strong { font-size: 11.5px; }
+  .hp-card span { font-size: 10.5px; gap: 5px; }
+}
+
 .reveal { opacity: 0; transform: translateY(24px); animation: rise 1s cubic-bezier(.2, .7, .2, 1) forwards; }
 .reveal.d1 { animation-delay: .1s; } .reveal.d2 { animation-delay: .25s; } .reveal.d3 { animation-delay: .5s; }
 @keyframes rise { to { opacity: 1; transform: none; } }
 
 @media (max-width: 860px) {
-  .hero-note { left: var(--gutter); right: auto; bottom: 64px; width: auto; max-width: 300px; padding: 14px 16px; }
-  .hero-content { bottom: 190px; }
+  .hero-content { bottom: 84px; }
   .hero-explore { display: none; }
   .hero-coord { bottom: 22px; }
 }
+/* มือถือแนวตั้ง: ชื่อหมู่บ้านไม่ล้นจอแม้สลับไปฟอนต์ตัวกว้าง */
+@media (max-width: 560px) {
+  .hero-title { font-size: clamp(46px, 15vw, 72px); }
+  .hero-place { margin-bottom: 12px; }
+}
+/* จอเตี้ย (มือถือแนวนอน): ฉากเปิดเท่าจอพอดี ชื่อเล็กลงให้อยู่ในจอแรก */
+@media (max-height: 520px) {
+  .hero, .hero-map { min-height: 0; }
+  .hero-title { font-size: clamp(44px, 20svh, 96px); }
+  .hero-content { bottom: 52px; }
+  .hero-place { margin-bottom: 8px; }
+}
 
 /* section ทั่วไปเลื่อนเข้ามานุ่ม ๆ */
-.welcome-inner, .land-head, .breakdown, .ps-body, .center-head, .how .wrap, .people-head, .cta-inner {
+.welcome-inner, .land-head, .cta-inner {
   opacity: 0; transform: translateY(28px); transition: opacity .9s ease, transform .9s cubic-bezier(.2, .7, .2, 1);
 }
-.in .welcome-inner, .in .land-head, .in .breakdown, .in .ps-body, .in .center-head, .in .how .wrap, .how.in .wrap, .in .people-head, .in .cta-inner { opacity: 1; transform: none; }
+/* กรอบภาพดาวเทียมต้องอยู่นิ่งให้แผนที่ย่อลงมาพอดี จึงขยับเฉพาะข้อความรอบ ๆ ไม่ขยับทั้งก้อน */
+.page-home .welcome-inner { opacity: 1; transform: none; transition: none; }
+.page-home .welcome-inner > :not(.welcome-frame) { opacity: 0; transform: translateY(28px); transition: opacity .9s ease, transform .9s cubic-bezier(.2, .7, .2, 1); }
+.page-home .welcome.in .welcome-inner > :not(.welcome-frame) { opacity: 1; transform: none; }
+.in .welcome-inner, .in .land-head, .in .cta-inner { opacity: 1; transform: none; }
 
 /* ---------------- ยินดีต้อนรับ ---------------- */
 .welcome { position: relative; overflow: hidden; padding: clamp(80px, 11vw, 150px) 0 clamp(80px, 9vw, 120px); background: var(--cream); }
 .ghost-word {
   position: absolute; left: 0; right: 0; top: clamp(24px, 4vw, 60px); margin: 0; text-align: center; white-space: nowrap;
-  font-family: var(--serif); font-weight: 300; font-size: clamp(130px, 27vw, 400px); line-height: 1; color: var(--cream-2); pointer-events: none; user-select: none;
+  font-family: var(--serif); font-weight: 300; font-size: clamp(88px, 27vw, 400px); line-height: 1; color: var(--cream-2); pointer-events: none; user-select: none;
 }
 .welcome-inner { position: relative; text-align: center; }
-.welcome-frame { position: relative; display: block; width: min(760px, 100%); margin: 28px auto 52px; border-radius: var(--r); overflow: hidden; background: #3b4434; }
+.welcome-frame {
+  position: relative; display: block; width: min(760px, 100%); margin: 28px auto 52px;
+  /* จอเตี้ย (มือถือแนวนอน): กรอบต้องสูงไม่เกินจอ (เว้นบนล่าง 80px) แผนที่ฉากเปิดจะย่อลงกรอบได้ทั้งกรอบ */
+  width: min(760px, 100%, (100svh - 160px) * 1200 / 760); border-radius: var(--r); overflow: hidden; background: #3b4434;
+  box-shadow: var(--shadow-2); outline: 1px solid rgba(29, 29, 27, .06); outline-offset: 6px; transition: box-shadow .4s ease, outline-offset .4s var(--ease);
+}
+.welcome-frame:hover { outline-offset: 10px; }
 .mini-map { position: relative; aspect-ratio: 1200 / 760; }
 .mini-sat { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s cubic-bezier(.2, .7, .2, 1); }
 .welcome-frame:hover .mini-sat { transform: scale(1.03); }
@@ -157,7 +361,8 @@ button { font: inherit; color: inherit; }
 .mm-area { fill: none; stroke: var(--yellow); stroke-width: 2.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; }
 .mm-plot { fill: var(--c); fill-opacity: .38; stroke: var(--c); stroke-width: 2; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity .6s ease calc(var(--i) * 80ms + .4s); }
 .in .mm-plot { opacity: 1; }
-.frame-cap { position: absolute; left: 14px; bottom: 14px; padding: 5px 12px; border-radius: 999px; background: var(--cream); color: var(--ink); font-size: 12.5px; }
+.frame-cap { position: absolute; left: 14px; bottom: 14px; padding: 5px 12px; border-radius: 999px; background: var(--cream); color: var(--ink); font-size: 12.5px; box-shadow: var(--shadow-1); transition: background .25s ease; }
+.welcome-frame:hover .frame-cap { background: var(--yellow); }
 .welcome-text { max-width: 620px; margin: 0 auto; font-size: 18px; line-height: 1.85; }
 .welcome-text p { margin: 0; }
 .welcome-text .strong { font-weight: 600; margin-top: 10px; }
@@ -169,60 +374,111 @@ button { font: inherit; color: inherit; }
 .stats dd { margin: 4px 0 0; font-weight: 300; font-size: clamp(44px, 6vw, 84px); line-height: 1.1; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) {
   .stats { grid-template-columns: 1fr 1fr; }
+  .stats dd { font-size: clamp(34px, 11.7vw, 44px); }
+  .welcome-text { font-size: 17px; }
   .stats > div { padding: 16px 0 20px 16px; }
   .stats > div:nth-child(odd) { padding-left: 0; border-left: 0; }
   .stats > div:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
 
 /* ---------------- ผืนดิน ---------------- */
-.land { padding: clamp(80px, 11vw, 150px) 0; background: var(--paper); overflow: hidden; }
+/* ผืนดิน: พื้นหลังภาพดาวเทียมเต็มจอ (.land-stage ติดจอตลอดช่วงบล็อกนี้) ตัวหนังสือสีอ่อนบนม่านเข้ม
+   overflow: clip (ไม่ใช่ hidden) เพื่อให้ sticky ยังติดกับจอได้ */
+/* --land-wash: สีที่พื้นหลังแผนที่ค่อย ๆ กลายเป็นตอนเลื่อนจบบล็อก (ต้องตรงกับพื้นของบล็อกถัดไป .plots-gallery) */
+:root { --land-shade: linear-gradient(180deg, rgba(14, 18, 12, .6), rgba(14, 18, 12, .72)); --land-wash: var(--paper); }
+.land { position: relative; background: #1e2a1f; color: #fff; overflow: clip; transition: color .4s ease; }
+/* สูงเท่าจอตอนแถบที่อยู่มือถือหดแล้ว (lvh) ไม่เห็นขอบล่างของภาพตอนแถบหดระหว่างเลื่อน
+   ภาพ (--land-img) ตั้งจาก home.js ใช้ร่วมกับ #land-bg */
+.land-stage { position: sticky; top: 0; height: 100vh; height: 100lvh; margin-bottom: -100vh; margin-bottom: -100lvh; background: #1e2a1f var(--land-img, none) center / cover no-repeat; }
+.land-stage::before { content: ""; position: absolute; inset: 0; background: var(--land-shade); }
+/* ท้ายบล็อก: เนื้อหาเลื่อนขึ้นมาจนขอบล่างถึงขอบล่างจอแล้วหยุดนิ่ง (.pin จาก home.js: sticky โดย top = ความสูงจอ - ความสูงเนื้อหา --land-h)
+   เนื้อหาจบด้วยกล่องคำใหญ่สูงเท่าจอ (คำอยู่กลางกล่อง) จึงหยุดพอดีตอนคำใหญ่อยู่กลางจอ
+   ระหว่างเลื่อนผ่าน .land-tail พื้นหลังแผนที่ค่อย ๆ กลายเป็นสีขาว (--wash 0-1 จาก home.js) พร้อมกันนั้นข้อความอื่น (.land-fade) จางหาย (--out)
+   คำใหญ่ "นา สวน ไร่ / บ่อปลา & ป่า" เริ่มขยายทันที (--grow) แล้วบรรทัดบนเลื่อนออกซ้าย บรรทัดล่างออกขวา (transform จาก home.js)
+   พ้น .land-tail แล้วบล็อกถัดไปที่พื้นขาวเหมือนกันเลื่อนขึ้นมา จึงต่อกันเนียน */
+.land-stage::after { content: ""; position: absolute; inset: 0; background: var(--land-wash); opacity: var(--wash, 0); }
+.land-tail { height: 100vh; height: 100svh; }
+.land-fade { opacity: calc(1 - var(--out, 0)); }
+.land-body { position: relative; padding: clamp(80px, 11vw, 150px) 0 0; }
+.land.pin .land-body { position: sticky; top: calc(100vh - var(--land-h)); top: calc(100svh - var(--land-h)); }
+/* ตัวหนังสือสีอ่อนบนแผนที่ พอพื้นขาวเกินครึ่งทาง (.lit จาก home.js) เปลี่ยนเป็นสีเข้มแบบหน้าปกติ อ่านออกตลอด */
+.land.lit { color: var(--ink); }
+.land :is(.label, .lead, .title em, .land-words) { transition: color .4s ease; }
+.land .label::before { transition: background-color .4s ease; }
+.land:not(.lit) .label { color: rgba(255, 255, 255, .82); }
+.land:not(.lit) .label::before { background: var(--yellow); }
+.land:not(.lit) .title em { color: var(--yellow); }
+.land:not(.lit) .lead { color: rgba(255, 255, 255, .8); }
 .land-head { max-width: 780px; text-align: center; display: grid; gap: 22px; justify-items: center; }
 .land-head .lead { max-width: 620px; }
+/* กล่องสูงเท่าจอ คำอยู่กลางกล่อง: ตอนเนื้อหาหยุด (ขอบล่างถึงขอบล่างจอ) คำจึงอยู่กลางจอพอดี */
 .land-words {
-  margin: clamp(48px, 7vw, 90px) 0; text-align: center; font-family: var(--serif); font-weight: 300; color: #8d8579;
+  margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center;
+  text-align: center; font-family: var(--serif); font-weight: 300; color: #8d8579;
   font-size: clamp(46px, 9vw, 140px); line-height: 1.3; letter-spacing: .08em;
 }
-.land-words span { display: block; white-space: nowrap; }
-.breakdown { max-width: 920px; margin: 0 auto; }
-.bd-bar { display: flex; gap: 3px; height: 12px; }
-.bd-seg { width: 0; background: var(--c); transition: width 1.2s cubic-bezier(.2, .7, .2, 1); }
-.bd-bar.in .bd-seg { width: var(--w); }
-.bd-list { list-style: none; padding: 0; margin: 28px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); column-gap: 28px; }
-.bd-list li { display: grid; padding: 16px 0; border-top: 1px solid var(--line); }
-.bd-pct { font-weight: 300; font-size: 36px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.bd-name { font-weight: 500; display: flex; align-items: center; gap: 8px; }
-.bd-name::before { content: ""; width: 10px; height: 10px; background: var(--c); }
-.bd-val { font-size: 13.5px; color: var(--muted); }
-
-/* ---------------- สไลด์แปลง ---------------- */
-.plots-slider { display: grid; grid-template-columns: 1fr 1fr; min-height: min(88vh, 820px); background: var(--cream); }
-.ps-media { position: relative; overflow: hidden; background: #2f3a2c; }
-.ps-slide { position: absolute; inset: 0; margin: 0; opacity: 0; transition: opacity .8s ease; }
-.ps-slide.on { opacity: 1; z-index: 1; }
-.ps-slide img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.05); transition: transform 6s ease-out; }
-.ps-slide.on img { transform: scale(1); }
-.ps-slide.is-photo { cursor: zoom-in; }
-.ps-slide svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.ps-outline { fill: var(--c); fill-opacity: .18; stroke: var(--c); stroke-width: 3; vector-effect: non-scaling-stroke; }
-.ps-body { padding: clamp(36px, 6vw, 96px); display: flex; flex-direction: column; gap: 40px; justify-content: space-between; }
-.ps-top { display: flex; justify-content: space-between; align-items: baseline; }
-.ps-count { margin: 0; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 22px; color: var(--taupe); font-variant-numeric: tabular-nums; }
-.ps-title { margin: 20px 0 10px; font-weight: 400; font-size: clamp(34px, 3.8vw, 54px); line-height: 1.18; }
-.ps-people { margin: 0; font-size: 18px; }
-.ps-facts { margin: 4px 0 0; font-size: 14px; letter-spacing: .04em; color: var(--muted); white-space: pre-wrap; }
-.ps-quote { margin: 30px 0 0; padding-left: 18px; border-left: 2px solid var(--green); font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 21px; line-height: 1.6; white-space: pre-line; }
-.ps-text .btn { margin-top: 34px; }
-.ps-nav { display: flex; align-items: center; gap: 10px; }
-.ps-nav .text-link { margin-left: auto; }
-.arrow { width: 52px; height: 52px; border: 1px solid var(--ink); background: none; cursor: pointer; display: grid; place-items: center; transition: background .2s ease, color .2s ease; }
-.arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; }
-.arrow:hover { background: var(--ink); color: var(--cream); }
-.plots-slider.single .arrow { display: none; }
-@media (max-width: 860px) {
-  .plots-slider { grid-template-columns: 1fr; min-height: 0; }
-  .ps-media { aspect-ratio: 4 / 3; }
-  .ps-body { gap: 28px; }
+/* บนแผนที่: จาง ๆ แต่ชัดขึ้นตอนขยายเป็นตัวเอกช่วงท้าย */
+.land:not(.lit) .land-words { color: rgba(255, 255, 255, calc(.3 + .55 * var(--grow, 0))); }
+/* กว้างเท่าตัวหนังสือ (home.js วัดความกว้างไว้คิดขนาดขยาย/ระยะเลื่อนออก) */
+.land-words span { display: block; width: fit-content; margin-inline: auto; white-space: pre; }
+/* มือถือ: คำใหญ่ไม่ล้นจอ (บรรทัดห้ามตัด) */
+@media (max-width: 560px) {
+  .land-words { font-size: clamp(32px, 10.5vw, 46px); letter-spacing: .04em; }
 }
+
+/* ---------------- แปลงในชุมชน: แถวการ์ดวิ่งเอง ---------------- */
+/* พื้นขาวเท่ากับสีที่ท้ายบล็อก "ดินแต่ละผืน" จางไป (--land-wash)
+   ซ้อนทับท้ายบล็อกนั้นขึ้นไป --pg-over (home.js คิดให้แถวการ์ดอยู่กลางจอพอดีตอนคำใหญ่ออกพ้นจอ) ส่วนที่ทับโปร่งใส
+   การ์ดซ่อนอยู่จนคำใหญ่ออกไปหมด (.show จาก home.js) แล้วลอยเข้ามา: ใบที่ 1, 3, 5 ... ขึ้นจากข้างล่าง ใบที่ 2, 4, 6 ... ลงมาจากข้างบน
+   เลื่อนย้อนขึ้นก็ลอยออกไปก่อนคำใหญ่กลับมา */
+.plots-gallery {
+  --pg-w: clamp(170px, 21vw, 300px); --pg-gap: clamp(14px, 1.6vw, 24px);
+  position: relative; z-index: 3; margin-top: calc(-1 * var(--pg-over, 20vh)); padding: clamp(36px, 5vw, 64px) 0 clamp(70px, 9vw, 120px);
+  background: linear-gradient(transparent var(--pg-over, 20vh), var(--paper) 0); overflow: hidden; overflow-x: clip; overflow-y: visible;
+}
+/* ป้าย + แถวการ์ดติดกลางจอ (--pg-top จาก home.js) ตั้งแต่ลอยเข้า แล้วรั้งไว้ระยะเลื่อนเท่าความสูง .pg-hold ค่อยปล่อยเลื่อนต่อ
+   (ยาวพอให้เห็นทั้งตอนลอยเข้าและตอนวิ่งพรวด) */
+.pg-stick { position: sticky; top: var(--pg-top, 20vh); }
+.pg-hold { height: 140vh; height: 140svh; }
+.pg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; transition: opacity .5s ease; }
+.plots-gallery:not(.show) .pg-head { opacity: 0; pointer-events: none; }
+/* ลอยเข้า: เร็ว ๆ ไล่กันทีละใบนิดเดียว (--i ลำดับการ์ด ตั้งจาก home.js) */
+.pg-card { transition: opacity .45s ease, transform .6s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--i, 0) * 50ms); }
+.plots-gallery:not(.show) .pg-card { opacity: 0; transform: translateY(110px); pointer-events: none; }
+.plots-gallery:not(.show) .pg-card:nth-child(even) { transform: translateY(-110px); }
+.plots-gallery:not(.show) .pg-track { animation-play-state: paused; }
+/* แถววนไม่รู้จบ: home.js ใส่การ์ดสองชุดเหมือนกัน เลื่อนไปครึ่งหนึ่ง (ชุดแรกพอดี) แล้ววนกลับ ความเร็วตั้งเป็น --pg-dur
+   หยุดเมื่อ: ขยับเมาส์เข้ามาชี้เอง (.pause จาก home.js ไม่นับเมาส์ที่วางค้างอยู่ก่อนแล้ว ไม่นับจอสัมผัส) / กด Tab เข้ามา / เลื่อนพ้นจอ
+   ช่วงลอยเข้า + วิ่งพรวด (.intro): ไม่หยุดเลย และกดการ์ดไม่ได้ (กันกดโดนใบที่วิ่งผ่าน) */
+/* ตัดเฉพาะซ้ายขวา (แถววิ่ง) ไม่ตัดบนล่าง การ์ดที่ลอยเข้าจากบน/ล่างจะได้ไม่โดนตัด */
+.pg-view { margin-top: clamp(22px, 3vw, 36px); overflow: hidden; overflow-x: clip; overflow-y: visible; }
+.pg-track { display: flex; width: max-content; padding: 6px 0 4px; animation: pg-run var(--pg-dur, 60s) linear infinite; will-change: transform; }
+.pg-view.pause .pg-track, .pg-track:has(:focus-visible), .pg-view.off .pg-track { animation-play-state: paused; }
+.plots-gallery.show .pg-view.intro .pg-track { animation-play-state: running; }
+.pg-view.intro .pg-card { pointer-events: none; }
+@keyframes pg-run { to { transform: translateX(-50%); } }
+/* ลดการเคลื่อนไหว: ไม่วิ่ง เลื่อนแนวนอนเอง */
+.pg-view.still { overflow-x: auto; scrollbar-width: none; padding-inline: var(--gutter); }
+.pg-view.still::-webkit-scrollbar { display: none; }
+.pg-view.still .pg-track { animation: none; }
+/* การ์ด: รูปโปรไฟล์ผู้ดูแล + รูปที่ส่งมาล่าสุด 3 รูป (ตาราง 2 x 2) ชื่อใต้ภาพ */
+.pg-card { flex: 0 0 var(--pg-w); width: var(--pg-w); margin-right: var(--pg-gap); display: block; text-decoration: none; color: inherit; }
+.pg-grid {
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; aspect-ratio: 1; border-radius: var(--r); overflow: hidden;
+  background: var(--paper); box-shadow: var(--shadow-1); transition: box-shadow .4s ease, transform .4s var(--ease);
+}
+@media (hover: hover) { .pg-card:hover .pg-grid { box-shadow: var(--shadow-2); transform: translateY(-3px); } }
+.pg-grid > * { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: cover; display: block; }
+/* ช่องรูปโปรไฟล์: ไม่มีรูปก็เป็นตัวอักษรแรกของชื่อ (หรือของการใช้ที่ดิน) ตัวใหญ่ */
+.pg-face { display: grid; place-items: center; background: color-mix(in srgb, var(--c) 22%, var(--cream-2)); font-family: var(--serif); font-style: italic; font-weight: 300; font-size: calc(var(--pg-w) * .22); line-height: 1; color: var(--ink-soft); }
+.pg-sat { position: relative; overflow: hidden; background: #2f3a2c; }
+.pg-sat img, .pg-sat svg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pg-outline { fill: var(--c); fill-opacity: .18; stroke: var(--c); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.pg-blank { background: color-mix(in srgb, var(--c) 14%, var(--cream)); }
+.pg-name { display: block; margin-top: 14px; font-weight: 500; font-size: clamp(15.5px, 1.3vw, 18px); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-meta { display: flex; align-items: center; gap: 7px; margin-top: 2px; font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.pg-meta::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: 0 0 auto; }
+.pg-meta span { overflow: hidden; text-overflow: ellipsis; }
 
 /* ป้ายการใช้ที่ดิน */
 .use-tag {
@@ -230,38 +486,6 @@ button { font: inherit; color: inherit; }
   font-size: 13px; font-weight: 500; line-height: 1.5; white-space: nowrap;
 }
 .use-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--taupe)); }
-
-/* ---------------- แถวเลื่อนแนวนอน (เรื่องเล่า / ผู้คน) ---------------- */
-.stories-row { padding: clamp(80px, 11vw, 150px) 0 clamp(70px, 9vw, 120px); background: var(--paper); }
-.center-head { text-align: center; }
-.center-head .title { font-weight: 500; }
-.title-sub { margin: 0; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: clamp(26px, 3vw, 40px); color: var(--taupe); line-height: 1.3; }
-.rail {
-  display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter);
-  padding: 52px var(--gutter) 12px; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
-}
-.rail.few { justify-content: safe center; }
-.rail-foot { text-align: center; margin-top: 36px; }
-.rail-card { flex: 0 0 clamp(250px, 25vw, 330px); scroll-snap-align: start; }
-.rc-cover { position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; padding: 0; border: 0; border-radius: var(--r); overflow: hidden; background: var(--cream-2); cursor: zoom-in; }
-.rc-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
-.rc-cover:hover img { transform: scale(1.04); }
-.rc-cover .use-tag { position: absolute; left: 12px; top: 12px; background: var(--cream); border-color: var(--cream); }
-.rc-count { position: absolute; right: 12px; bottom: 12px; padding: 2px 10px; border-radius: 999px; background: rgba(29, 29, 27, .78); color: #fff; font-size: 12.5px; }
-.rc-body { padding: 16px 2px 0; }
-.rc-date { font-size: 12.5px; letter-spacing: .04em; color: var(--muted); }
-.rc-caption { margin: 6px 0 14px; font-size: 17px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
-.rc-caption.muted { color: var(--muted); }
-.rc-who { display: flex; align-items: center; gap: 10px; text-decoration: none; padding-top: 12px; border-top: 1px solid var(--line); }
-.rc-who span { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
-.rc-who strong { font-weight: 500; font-size: 14.5px; }
-.rc-who small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rc-who:hover strong { text-decoration: underline; text-underline-offset: 4px; }
-.rc-who .avatar { width: 34px; height: 34px; }
-.rail.is-empty { display: block; }
-.empty-block { max-width: 520px; margin: 0 auto; padding: 40px 28px; text-align: center; border: 1px dashed var(--line); }
-.empty-block h3 { margin: 0 0 6px; font-weight: 500; font-size: 22px; }
-.empty-block p { margin: 0; color: var(--muted); }
 
 .avatar {
   width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; display: inline-grid; place-items: center;
@@ -271,37 +495,16 @@ button { font: inherit; color: inherit; }
 .faces { display: inline-flex; align-items: center; }
 .faces > * + * { margin-left: -9px; }
 
-/* ---------------- ทำงานอย่างไร ---------------- */
-.how { padding: clamp(80px, 11vw, 150px) 0; background: var(--forest); color: var(--cream); }
-.how .label { color: rgba(247, 245, 238, .7); }
-.how-head { max-width: 760px; display: grid; gap: 18px; }
-.how .title em { color: var(--yellow); }
-.steps { list-style: none; padding: 0; margin: clamp(56px, 7vw, 96px) 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 40px; }
-.steps li { border-top: 1px solid rgba(247, 245, 238, .35); padding-top: 22px; }
-.step-no { display: block; font-family: var(--serif); font-style: italic; font-weight: 200; font-size: 64px; line-height: 1.1; color: rgba(247, 245, 238, .55); }
-.steps h3 { margin: 18px 0 8px; font-weight: 500; font-size: 22px; line-height: 1.35; }
-.steps p { margin: 0; opacity: .82; }
-@media (max-width: 760px) { .steps { grid-template-columns: 1fr; gap: 36px; } }
-
-/* ---------------- ผู้คน ---------------- */
-.people { padding: clamp(80px, 11vw, 150px) 0 clamp(70px, 9vw, 120px); background: var(--cream); }
-.people-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; }
-.people-head > div { display: grid; gap: 18px; }
-.person { flex: 0 0 clamp(170px, 17vw, 230px); scroll-snap-align: start; text-decoration: none; display: flex; flex-direction: column; }
-.person-photo { display: block; aspect-ratio: 4 / 5; border-radius: var(--r); overflow: hidden; background: var(--cream-2); }
-.person-img { width: 100%; height: 100%; object-fit: cover; display: grid; place-items: center; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 84px; color: var(--taupe); transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
-.person:hover .person-img { transform: scale(1.04); }
-.person strong { margin-top: 14px; font-weight: 500; font-size: 18px; }
-.person-meta { font-size: 14px; color: var(--muted); }
-
 /* ---------------- ปิดท้าย ---------------- */
 .final-cta { position: relative; min-height: 78vh; display: grid; place-items: center; overflow: hidden; color: #fff; text-align: center; background: #2b3527; }
 .cta-map { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.1); transition: transform 2.4s cubic-bezier(.2, .7, .2, 1); }
 .final-cta.in .cta-map { transform: scale(1); }
-.final-cta::after { content: ""; position: absolute; inset: 0; background: rgba(20, 24, 18, .5); }
-.cta-inner { position: relative; z-index: 1; padding: 96px 20px; }
-.cta-inner h2 { margin: 0 0 36px; font-weight: 400; font-size: clamp(40px, 6.4vw, 92px); line-height: 1.14; }
+.final-cta::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(20, 24, 18, .35), rgba(20, 24, 18, .7)); }
+.cta-inner { position: relative; z-index: 1; width: min(1100px, 100%); padding: 96px 20px; }
+/* หัวข้อยาวขึ้น (2 วรรค) จึงเล็กกว่าหัวข้ออื่นนิดหนึ่ง; balance = ตัดบรรทัดให้ยาวพอ ๆ กัน ไม่เหลือคำเดียวโด่ง ๆ บนมือถือ */
+.cta-inner h2 { margin: 0 0 22px; font-weight: 400; font-size: clamp(34px, 5.4vw, 80px); line-height: 1.18; text-wrap: balance; text-shadow: 0 2px 30px rgba(0, 0, 0, .3); }
 .cta-inner h2 em { display: block; font-weight: 200; }
+.cta-text { max-width: 34em; margin: 0 auto 38px; font-size: clamp(16px, 1.35vw, 19px); line-height: 1.75; color: rgba(255, 255, 255, .86); text-wrap: pretty; text-shadow: 0 1px 16px rgba(0, 0, 0, .35); }
 
 /* ---------------- ท้ายเว็บ ---------------- */
 .site-footer { background: var(--ink); color: rgba(247, 245, 238, .72); padding: 72px 0 0; font-size: 14px; overflow: hidden; }
@@ -322,26 +525,33 @@ button { font: inherit; color: inherit; }
 @media (max-width: 760px) { .footer-grid { grid-template-columns: 1fr; } }
 
 /* ---------------- Lightbox ---------------- */
-.lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(20, 20, 18, .96); display: grid; grid-template-rows: 1fr auto; animation: fade .25s ease; }
+.lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(20, 20, 18, .94); display: grid; grid-template-rows: 1fr auto; animation: fade .25s ease; }
+@supports (backdrop-filter: blur(1px)) { .lightbox { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } }
 @keyframes fade { from { opacity: 0; } }
+@keyframes zoom-in { from { opacity: 0; transform: scale(.97); } }
 .lb-stage { display: grid; place-items: center; padding: 64px 16px 8px; min-height: 0; }
-.lb-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lb-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); animation: zoom-in .3s var(--ease); }
 .lb-meta { color: var(--cream); text-align: center; padding: 10px 20px calc(22px + env(safe-area-inset-bottom)); max-width: 760px; margin: 0 auto; }
 .lb-caption { margin: 0 0 4px; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 20px; white-space: pre-line; }
 .lb-sub { margin: 0; font-size: 13px; color: rgba(247, 245, 238, .6); letter-spacing: .03em; }
 .lb-close, .lb-nav {
   position: absolute; cursor: pointer; color: var(--cream); background: transparent; border: 1px solid rgba(247, 245, 238, .45);
-  width: 48px; height: 48px; font-size: 26px; line-height: 1; display: grid; place-items: center; transition: background .2s ease, color .2s ease;
+  width: 48px; height: 48px; border-radius: 50%; font-size: 26px; line-height: 1; display: grid; place-items: center; transition: background .2s ease, color .2s ease;
+  background: rgba(20, 20, 18, .4);
 }
 .lb-close { top: 14px; right: 14px; }
 .lb-nav { top: 50%; margin-top: -24px; font-size: 30px; }
 .lb-nav.prev { left: 14px; } .lb-nav.next { right: 14px; }
 .lb-close:hover, .lb-nav:hover { background: var(--cream); color: var(--ink); }
 
-.toast-error { position: fixed; left: 16px; right: 16px; bottom: 20px; z-index: 120; margin: 0 auto; max-width: 560px; padding: 12px 16px; background: #a3261e; color: #fff; }
+.toast-error { position: fixed; left: 16px; right: 16px; bottom: 20px; z-index: 120; margin: 0 auto; max-width: 560px; padding: 12px 16px; background: #a3261e; color: #fff; border-radius: var(--r-sm); box-shadow: var(--shadow-2); animation: fade .3s ease; }
 
 /* ---------------- หน้าเรื่องเล่า ---------------- */
-.page-hero { padding: calc(var(--nav-h) + clamp(48px, 7vw, 96px)) 0 28px; }
+.page-hero {
+  padding: calc(var(--nav-h) + clamp(48px, 7vw, 96px)) 0 28px;
+  background: radial-gradient(900px 380px at 100% 0%, rgba(86, 175, 49, .10), transparent 70%), radial-gradient(700px 300px at 0% 100%, rgba(255, 233, 0, .10), transparent 70%);
+}
+.page-hero .title em { color: var(--forest); }
 .page-hero .title { font-size: clamp(40px, 6vw, 84px); margin: 14px 0 18px; }
 .page-hero .lead { max-width: 640px; }
 .story-tools { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--ink); }
@@ -349,17 +559,18 @@ button { font: inherit; color: inherit; }
 .month-head { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 30px; margin: 48px 0 20px; display: flex; align-items: center; gap: 18px; }
 .month-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .masonry { columns: 3 300px; column-gap: 24px; }
-.masonry .story-card { margin-bottom: 36px; display: inline-flex; width: 100%; }
+.masonry .story-card { margin-bottom: 36px; display: inline-flex; width: 100%; break-inside: avoid; }
 .empty-note.center { text-align: center; padding: 40px 0; }
-.empty-hero { max-width: 560px; margin: 40px auto; padding: 48px 28px; text-align: center; border: 1px dashed var(--line); display: grid; gap: 10px; justify-items: center; }
+.empty-hero { max-width: 560px; margin: 40px auto; padding: 48px 28px; text-align: center; border: 1px dashed var(--line); border-radius: var(--r); background: var(--paper); display: grid; gap: 10px; justify-items: center; }
 .empty-hero h3 { margin: 0; font-weight: 500; font-size: 24px; }
 .empty-hero p { margin: 0 0 12px; color: var(--muted); }
 
 .story-card { display: flex; flex-direction: column; }
 .story-media {
   position: relative; display: grid; gap: 4px; padding: 0; border: 0; border-radius: var(--r); overflow: hidden; background: var(--cream-2);
-  cursor: zoom-in; aspect-ratio: 4 / 3;
+  cursor: zoom-in; aspect-ratio: 4 / 3; box-shadow: var(--shadow-1); transition: box-shadow .4s ease;
 }
+.story-card:hover .story-media { box-shadow: var(--shadow-2); }
 .story-media img { width: 100%; height: 100%; object-fit: cover; min-height: 0; transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
 .story-media:hover img { transform: scale(1.03); }
 .story-media.n2 { grid-template-columns: 1fr 1fr; }
@@ -390,7 +601,7 @@ button { font: inherit; color: inherit; }
   background: transparent; border: 1px solid var(--line); white-space: nowrap; transition: border-color .2s ease, background .2s ease;
 }
 .chip[style]::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-.chip:hover { border-color: var(--ink); }
+.chip:hover { border-color: var(--ink); background: var(--paper); }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--cream); border-color: var(--ink); }
 
 /* ---------------- หน้าแผนที่ ---------------- */
@@ -407,11 +618,14 @@ button { font: inherit; color: inherit; }
 .sort-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
 .sort-row select { font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink); font-weight: 500; cursor: pointer; }
 .plot-list { list-style: none; margin: 0; padding: 0 22px 28px; }
+.plot-list { padding-inline: 12px; }
 .plot-list > li + li { border-top: 1px solid var(--line); }
 .plot-item {
-  width: 100%; display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; text-align: left; padding: 14px 0; border: 0;
-  background: transparent; cursor: pointer;
+  width: 100%; display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; text-align: left; padding: 12px 10px; border: 0;
+  background: transparent; cursor: pointer; border-radius: 14px; transition: background .2s ease;
 }
+.plot-item:hover, .plot-item.hover { background: var(--paper); }
+.plot-list > li:has(.plot-item:hover) + li, .plot-list > li:has(.plot-item.hover) + li { border-top-color: transparent; }
 .plot-item:hover .pi-text strong { text-decoration: underline; text-underline-offset: 4px; }
 .pi-thumb { position: relative; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--c) 28%, var(--cream-2)); display: grid; place-items: center; }
 .pi-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -431,20 +645,25 @@ button { font: inherit; color: inherit; }
 
 /* แผงรายละเอียด */
 #detail-view { padding: 18px 22px 44px; }
-.back { border: 0; background: none; padding: 4px 0; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 14px; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
-.back:hover { color: var(--green); }
+.back {
+  border: 1px solid var(--line); background: var(--paper); padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 500;
+  margin-bottom: 16px; transition: border-color .2s ease, background .2s ease;
+}
+.back:hover { border-color: var(--ink); }
 .d-cover { position: relative; aspect-ratio: 16 / 11; border-radius: var(--r); overflow: hidden; background: color-mix(in srgb, var(--c) 35%, var(--cream-2)); display: grid; place-items: center; }
 .d-cover.has-photo { cursor: zoom-in; }
 .d-cover img { width: 100%; height: 100%; object-fit: cover; }
 .d-cover-icon { font-family: var(--serif); font-style: italic; font-weight: 200; font-size: 110px; color: var(--ink-soft); opacity: .6; }
 .d-cover .use-tag { position: absolute; left: 12px; top: 12px; background: var(--cream); border-color: var(--cream); }
+.d-cover { box-shadow: var(--shadow-1); }
 .d-title { font-weight: 400; font-size: 32px; line-height: 1.25; margin: 20px 0 16px; }
-.d-facts { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); }
+.d-facts { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--paper); border-radius: var(--r-sm); padding: 4px 14px; box-shadow: var(--shadow-1); }
 .fact { padding: 10px 8px 12px 0; display: flex; flex-direction: column; min-width: 0; }
 .fact + .fact { padding-left: 10px; border-left: 1px solid var(--line); }
 .fact b { font-weight: 300; font-size: 24px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fact span { font-size: 12px; color: var(--muted); }
-.d-label { font-size: 12.5px; font-weight: 600; letter-spacing: .06em; color: var(--taupe); margin: 30px 0 12px; }
+.d-label { font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--taupe); margin: 30px 0 12px; display: flex; align-items: center; gap: 10px; }
+.d-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .d-people { display: grid; gap: 10px; }
 .d-person { display: flex; align-items: center; gap: 12px; }
 .d-person .avatar { width: 48px; height: 48px; border-color: var(--cream); box-shadow: 0 0 0 1.5px var(--c); }
@@ -454,7 +673,7 @@ button { font: inherit; color: inherit; }
 .timeline { position: relative; }
 .tl-item { position: relative; padding: 0 0 28px 22px; }
 .tl-item::before { content: ""; position: absolute; left: 4px; top: 12px; bottom: 0; width: 1px; background: var(--line); }
-.tl-item::after { content: ""; position: absolute; left: 0; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.tl-item::after { content: ""; position: absolute; left: 0; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px var(--cream), 0 0 0 4px color-mix(in srgb, var(--c) 50%, transparent); }
 .tl-item:last-child::before { display: none; }
 .tl-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
 .tl-head time { font-weight: 500; color: var(--ink); }
@@ -492,16 +711,19 @@ button { font: inherit; color: inherit; }
 
 .map-tools { position: absolute; top: 16px; right: 16px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
 .tool {
-  width: 44px; height: 44px; border: 0; cursor: pointer; background: var(--cream); color: var(--ink);
-  font-weight: 600; font-size: 13.5px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); display: grid; place-items: center;
+  width: 44px; height: 44px; border: 0; border-radius: var(--r-sm); cursor: pointer; background: var(--cream); color: var(--ink);
+  font-weight: 600; font-size: 13.5px; box-shadow: var(--shadow-map); display: grid; place-items: center; transition: background .2s ease, transform .2s var(--ease);
 }
+.tool:hover { background: var(--paper); }
+.tool:active { transform: scale(.94); }
 .tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .tool[aria-pressed="true"] { background: var(--yellow); }
 .legend {
   position: absolute; left: 16px; bottom: 16px; z-index: 3; padding: 12px 14px; font-size: 12.5px;
-  background: var(--cream); color: var(--ink); box-shadow: 0 2px 10px rgba(0, 0, 0, .25); display: grid; gap: 4px;
+  background: rgba(247, 245, 238, .94); color: var(--ink); box-shadow: var(--shadow-map); display: grid; gap: 4px; border-radius: var(--r-sm);
 }
-.lg-toggle { border: 0; background: none; color: var(--taupe); padding: 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-align: left; cursor: pointer; }
+@supports (backdrop-filter: blur(1px)) { .legend { background: rgba(247, 245, 238, .8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); } }
+.lg-toggle { border: 0; background: none; color: var(--taupe); padding: 0; font-size: 12.5px; font-weight: 600; letter-spacing: .02em; text-align: left; cursor: pointer; }
 .lg-toggle::after { content: " −"; }
 .legend.collapsed .lg-row { display: none; }
 .legend.collapsed .lg-toggle { color: var(--ink); }
@@ -509,9 +731,9 @@ button { font: inherit; color: inherit; }
 .lg-row { display: flex; align-items: center; gap: 8px; }
 .lg-sw { width: 16px; height: 10px; flex: 0 0 auto; }
 .lg-sw.area { height: 0; border-top: 2px dashed #c9b800; }
-.lg-sw.plot { background: color-mix(in srgb, var(--c) 55%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
+.lg-sw.plot { background: color-mix(in srgb, var(--c) 55%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); border-radius: 3px; }
 .lg-sw.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 0 2px var(--ink); margin: 0 3px; }
-.maplibregl-ctrl-group { border-radius: 0 !important; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, .25) !important; }
+.maplibregl-ctrl-group { border-radius: var(--r-sm) !important; overflow: hidden; box-shadow: var(--shadow-map) !important; }
 .maplibregl-ctrl-bottom-right { margin-bottom: 4px; }
 
 @media (max-width: 860px) {
@@ -532,7 +754,12 @@ button { font: inherit; color: inherit; }
   .maplibregl-ctrl-bottom-right { bottom: 200px; }
 }
 
+@media (max-width: 640px) {
+  .btn { padding: 13px 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .reveal { opacity: 1; transform: none; }
+  .hp.on .hp-dot::after { animation: none; }
 }

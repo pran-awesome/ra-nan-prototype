@@ -1,6 +1,7 @@
 // หน้าแผนที่ชุมชน: รายการแปลง (ค้นหา/กรอง/เรียง) + แผนที่ดาวเทียม + แผงรายละเอียดแปลงพร้อมเรื่องเล่าตามเวลา
-(() => {
-  const { el, img, loadAll, landUseColor, landUseIcon, formatNum, formatDate, formatDay, timeAgo, plotTitle, peopleLabel, avatarEl, facesEl, displayName, openLightbox } = RN;
+// รอโหลด content/text.txt ก่อน แล้วค่อยสร้างหน้า
+RN.ready.then(() => {
+  const { t, el, img, loadAll, landUseColor, landUseIcon, formatNum, formatDate, formatDay, timeAgo, plotTitle, peopleLabel, avatarEl, facesEl, displayName, openLightbox } = RN;
 
   RN.renderNav("map");
 
@@ -54,7 +55,7 @@
       b.onclick = () => { state.use = state.use === key && key !== "all" ? "all" : key; renderChips(); applyFilter(); };
       box.append(b);
     };
-    chip("all", `ทั้งหมด ${data.plots.length}`);
+    chip("all", t("map.all", { n: data.plots.length }));
     for (const [k, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) chip(k, `${k} ${n}`, landUseColor(k));
     box.hidden = counts.size < 2;
   }
@@ -74,7 +75,7 @@
       who.append(facesEl(p.villagers, 3), el("span", null, peopleLabel(p)));
       text.append(who);
     }
-    const meta = [p.landUse, p.area_rai != null ? `${formatNum(p.area_rai, 1)} ไร่` : null, p.lastPhotoAt ? `อัปเดต${timeAgo(p.lastPhotoAt)}` : "ยังไม่มีรูป"].filter(Boolean);
+    const meta = [p.landUse, p.area_rai != null ? t("map.item_rai", { n: formatNum(p.area_rai, 1) }) : null, p.lastPhotoAt ? t("map.item_updated", { ago: timeAgo(p.lastPhotoAt) }) : t("map.item_no_photo")].filter(Boolean);
     text.append(el("span", "pi-meta", meta.join(" · ")));
     b.append(thumb, text);
     b.onclick = () => select(p.id);
@@ -88,13 +89,13 @@
     const list = $("plot-list");
     const shown = data.plots.filter(matches).sort(sorters[state.sort]);
     list.replaceChildren(...shown.map(plotItem));
-    $("result-count").textContent = data.plots.length ? `พบ ${shown.length} แปลง` : "";
+    $("result-count").textContent = data.plots.length ? t("map.found", { n: shown.length }) : "";
     if (!data.plots.length) {
       const li = el("li", "list-empty");
-      li.append(el("strong", null, "ยังไม่มีแปลงบนแผนที่"), el("p", null, "ทีมงานชุมชนกำลังวาดขอบแปลงจากภาพดาวเทียม เส้นประสีเหลืองคือขอบเขตของหมู่บ้าน"));
+      li.append(el("strong", null, t("map.empty_title")), el("p", null, t("map.empty_text")));
       list.append(li);
     } else if (!shown.length) {
-      list.append(el("li", "list-empty", "ไม่พบแปลงที่ตรงกับคำค้น"));
+      list.append(el("li", "list-empty", t("map.no_match")));
     }
     const ids = new Set(shown.map((p) => p.id));
     if (map?.getSource("plots")) for (const p of data.plots) map.setFeatureState({ source: "plots", id: p.id }, { dim: !ids.has(p.id) });
@@ -112,7 +113,7 @@
 
     const cover = el("div", "d-cover");
     if (p.photos[0]) {
-      const im = img(p.photos[0].image_url, p.photos[0].caption || "รูปล่าสุดจากแปลงนี้");
+      const im = img(p.photos[0].image_url, p.photos[0].caption || t("map.cover_alt"));
       cover.append(im);
       cover.onclick = () => openLightbox([...p.photos], 0, plotTitle(p));
       cover.classList.add("has-photo");
@@ -125,41 +126,41 @@
     box.append(el("h2", "d-title", plotTitle(p)));
     const facts = el("div", "d-facts");
     const fact = (v, k) => { const f = el("div", "fact"); f.append(el("b", null, v), el("span", null, k)); facts.append(f); };
-    fact(p.area_rai != null ? formatNum(p.area_rai, 1) : "–", "ไร่");
-    fact(formatNum(p.photos.length), "รูป");
-    fact(formatNum(p.stacks.length), "เรื่องเล่า");
-    fact(p.code, "รหัสแปลง");
+    fact(p.area_rai != null ? formatNum(p.area_rai, 1) : "–", t("map.fact_rai"));
+    fact(formatNum(p.photos.length), t("map.fact_photos"));
+    fact(formatNum(p.stacks.length), t("map.fact_stories"));
+    fact(p.code, t("map.fact_code"));
     box.append(facts);
 
     if (p.villagers.length) {
       const people = el("div", "d-people");
-      people.append(el("p", "d-label", "ผู้ดูแลแปลง"));
+      people.append(el("p", "d-label", t("map.caretakers")));
       for (const v of p.villagers) {
         const row = el("div", "d-person");
-        const t = el("span");
-        t.append(el("strong", null, displayName(v)));
-        if (v.nickname && v.nickname !== v.name) t.append(el("small", null, v.name));
-        row.append(avatarEl(v), t);
+        const nm = el("span");
+        nm.append(el("strong", null, displayName(v)));
+        if (v.nickname && v.nickname !== v.name) nm.append(el("small", null, v.name));
+        row.append(avatarEl(v), nm);
         people.append(row);
       }
       box.append(people);
     }
 
     const tl = el("div", "timeline");
-    tl.append(el("p", "d-label", p.stacks.length ? "เรื่องเล่าจากแปลงนี้" : "เรื่องเล่า"));
+    tl.append(el("p", "d-label", p.stacks.length ? t("map.stories_from_plot") : t("map.stories_none_label")));
     if (!p.stacks.length) {
-      tl.append(el("p", "empty-note", "ยังไม่มีรูปจากแปลงนี้ เมื่อผู้ดูแลแปลงส่งรูปผ่าน LINE จะขึ้นที่นี่ทันที"));
+      tl.append(el("p", "empty-note", t("map.stories_none")));
     }
     for (const s of p.stacks) {
       const item = el("article", "tl-item");
       const head = el("div", "tl-head");
-      head.append(el("time", null, formatDay(s.started)), el("span", null, `${timeAgo(s.latest)} · ${s.photos.length} รูป`));
+      head.append(el("time", null, formatDay(s.started)), el("span", null, t("map.story_meta", { ago: timeAgo(s.latest), n: s.photos.length })));
       item.append(head);
       if (s.caption) item.append(el("p", "tl-caption", s.caption));
       const grid = el("div", `tl-grid n${Math.min(s.photos.length, 4)}`);
       s.photos.forEach((ph, i) => {
         const btn = el("button", "tl-photo");
-        btn.setAttribute("aria-label", ph.caption || `รูปที่ ${i + 1}`);
+        btn.setAttribute("aria-label", ph.caption || t("map.photo_n", { n: i + 1 }));
         btn.append(img(ph.image_url, ph.caption || ""));
         if (ph.caption && ph.caption !== s.caption) btn.append(el("span", "tl-pcap", ph.caption));
         btn.onclick = () => openLightbox(s.photos, i, plotTitle(p));
@@ -239,7 +240,7 @@
 
   function legend() {
     const box = $("legend");
-    const toggle = el("button", "lg-toggle", "สัญลักษณ์");
+    const toggle = el("button", "lg-toggle", t("map.legend"));
     toggle.setAttribute("aria-expanded", String(!isMobile()));
     box.classList.toggle("collapsed", isMobile());
     toggle.onclick = () => {
@@ -255,9 +256,9 @@
       r.append(sw, el("span", null, label));
       box.append(r);
     };
-    row("area", "ขอบเขตชุมชน");
+    row("area", t("map.legend_area"));
     uses.forEach((u) => row("plot", u, landUseColor(u)));
-    if (data.reports.some((r) => r.own_location || r.plot_id == null)) row("dot", "รูปที่ปักตำแหน่งเอง");
+    if (data.reports.some((r) => r.own_location || r.plot_id == null)) row("dot", t("map.legend_loose"));
   }
 
   let terrainOn = false;
@@ -349,9 +350,9 @@
       $("area-name").textContent = data.area.name;
       const people = data.villagers.length;
       $("summary").textContent = data.plots.length
-        ? `${formatNum(data.plots.length)} แปลง · ${formatNum(data.totalRai, 1)} ไร่ · ${formatNum(people)} คน · ${formatNum(data.reports.length)} รูป`
-        : "ขอบเขตหมู่บ้านพร้อมแล้ว รอแปลงแรก";
-      document.title = `แผนที่ชุมชน · ${data.areaTitle.replace(/^ชุมชน/, "")}`;
+        ? t("map.summary", { plots: formatNum(data.plots.length), rai: formatNum(data.totalRai, 1), people: formatNum(people), photos: formatNum(data.reports.length) })
+        : t("map.summary_empty");
+      document.title = t("map.page_title", { name: data.areaTitle.replace(/^ชุมชน/, "") });
       renderChips();
       legend();
       applyFilter();
@@ -359,6 +360,6 @@
     })
     .catch((err) => {
       console.error(err);
-      RN.showError(`โหลดข้อมูลไม่สำเร็จ: ${err.message}`);
+      RN.showError(err);
     });
-})();
+});
