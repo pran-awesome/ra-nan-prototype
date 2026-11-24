@@ -278,7 +278,10 @@ RN.ready.then(() => {
       maxZoom: 19,
       maxPitch: 75,
       attributionControl: { compact: true },
+      // มือถือจอความละเอียด 3 เท่า: วาดแค่ 2 เท่าพอ (ตาแยกไม่ออก แต่ใช้หน่วยความจำ/การ์ดจอน้อยลงเกินครึ่ง)
+      pixelRatio: Math.min(devicePixelRatio || 1, 2),
     });
+    RN.keepPainted(map);
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
     map.addControl(new maplibregl.GeolocateControl({ trackUserLocation: true }), "bottom-right");
     $("toggle-3d").onclick = () => set3d(!terrainOn);

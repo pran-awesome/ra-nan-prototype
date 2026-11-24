@@ -85,6 +85,18 @@ RN.ready.then(() => {
     if (prop.startsWith("--")) node.style.setProperty(prop, value);
     else node.style[prop] = value;
   };
+  // เลื่อนหน้าไปตำแหน่งนี้ทันที (ไม่เลื่อนนุ่ม ๆ ตาม scroll-behavior: smooth ของหน้า)
+  //   Safari รุ่นเก่ายังไม่รู้จัก behavior: "instant" (โยน error) จึงปิดการเลื่อนนุ่มชั่วคราวแทน
+  const jump = (top) => {
+    try {
+      scrollTo({ top, behavior: "instant" });
+    } catch {
+      const st = document.documentElement.style;
+      st.scrollBehavior = "auto";
+      scrollTo(0, top);
+      st.scrollBehavior = "";
+    }
+  };
   // รอให้ภาพโหลด + ถอดรหัสเสร็จ (โชว์ทีหลังจะไม่ต้องถอดรหัสกลางการเลื่อน) พังก็ถือว่าเสร็จ ไม่ค้าง
   const decoded = (im) => (im.decode ? im.decode() : Promise.resolve()).catch(() => {});
 
@@ -347,9 +359,11 @@ RN.ready.then(() => {
       interactive: false,
       attributionControl: false,
       fadeDuration: 0,
-      // มือถือจอความละเอียด 3 เท่า: วาดแค่ 2 เท่าพอ (ตาแยกไม่ออก แต่ลื่นขึ้นมาก)
-      pixelRatio: Math.min(devicePixelRatio || 1, 2),
+      // ความละเอียดที่วาด: จอคอม/แท็บเล็ตไม่เกิน 2 เท่า, มือถือ 1.5 เท่า (แผนที่ 3 มิติหมุนตลอด อยู่ใต้ม่านเงา
+      //   ตาแทบแยกไม่ออก แต่จำนวนจุดที่ต้องวาดทุกเฟรมลดลงเกือบครึ่ง เครื่องไม่ร้อน ลื่นขึ้นมาก)
+      pixelRatio: Math.min(devicePixelRatio || 1, matchMedia("(pointer: coarse) and (max-width: 820px)").matches ? 1.5 : 2),
     });
+    RN.keepPainted(map);   // ลดการเคลื่อนไหว (แผนที่นิ่ง) / กลับมาจากแอปอื่น: กันภาพหายบน iPhone
     const mapLoad = new Promise((r) => map.once("load", r));
     let shown = false, faded = false;
     const show = () => {
@@ -386,16 +400,15 @@ RN.ready.then(() => {
       const cx = (view.ext[0] + view.ext[2]) / 2, cy = (view.ext[1] + view.ext[3]) / 2;
       // ความละเอียดไม่เกิน 1.5 เท่าของจอ: เป็นพื้นหลังใต้ม่านเข้ม ไม่ต้องคมเท่าจอ retina แต่ไฟล์เล็กลงเกือบครึ่ง โหลด/ถอดรหัสเร็วขึ้น
       const k = Math.min(devicePixelRatio || 1, 1.5, 4096 / W, 4096 / H);
-      const url = exportUrl([cx - (W * mpp) / 2, cy - (H * mpp) / 2, cx + (W * mpp) / 2, cy + (H * mpp) / 2], Math.round(W * k), Math.round(H * k));
+      const ext = [cx - (W * mpp) / 2, cy - (H * mpp) / 2, cx + (W * mpp) / 2, cy + (H * mpp) / 2];
       // โหลด + ถอดรหัสให้เสร็จก่อนค่อยใช้ (ตอนเปลี่ยนขนาดจอ ภาพเดิมยังอยู่จนภาพใหม่พร้อม ไม่กระพริบ)
       // ภาพเดียวใช้ทั้ง #land-bg และ .land-stage (site.css อ่านจาก --land-img)
-      imgWant = url;
-      const pre = new Image();
-      pre.src = url;
-      decoded(pre).then(() => {
-        if (imgWant !== url) return;
-        [landBg, landBox].forEach((n) => n?.style.setProperty("--land-img", `url("${url}")`));
-        boot.done("land");
+      imgWant = key;
+      tileImage(ext, Math.round(W * k), Math.round(H * k)).then(async (url) => {
+        if (url) await decoded(Object.assign(new Image(), { src: url }));
+        if (imgWant !== key) return;
+        if (url) [landBg, landBox].forEach((n) => n?.style.setProperty("--land-img", `url("${url}")`));
+        boot.done("land");   // ต่อภาพไม่สำเร็จก็ไม่ให้หน้าโหลดค้าง
       });
     }
     if (reduceMotion) {
@@ -554,7 +567,7 @@ RN.ready.then(() => {
       fade.forEach((n) => n && (n.style.opacity = ""));
       if (shade) shade.style.opacity = "";
       navState.skip = true;
-      scrollTo({ top: scrollY + anchor.getBoundingClientRect().top - before, behavior: "instant" });
+      jump(scrollY + anchor.getBoundingClientRect().top - before);
       setTimeout(() => (navState.skip = false), 120);   // เผื่อตำแหน่งไม่เปลี่ยนเลยจนไม่มี scroll event
       if (wasStack) statsIfSeen();
       if (map.terrain) map.terrain.exaggeration = TERRAIN;
@@ -846,8 +859,55 @@ RN.ready.then(() => {
   // ภาพนิ่งจาก Esri export (ไม่ต้องใช้ WebGL) ใช้กับกรอบภาพดาวเทียม สไลด์แปลง และฉากท้ายหน้า
   const R = 6378137;
   const merc = ([lng, lat]) => [(lng * Math.PI / 180) * R, Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) * R];
-  const exportUrl = (ext, w, h) =>
-    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${ext.join(",")}&bboxSR=3857&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
+  // ภาพดาวเทียมนิ่ง (กรอบยินดีต้อนรับ, พื้นหลังผืนดิน, ปิดท้าย, การ์ดแปลง): ต่อ tile ของ Esri เองใน canvas
+  //   แทนบริการ export ของ Esri ที่สร้างภาพใหม่ทุกครั้ง (ภาพ 1200x760 รอ 3-4 วินาที มือถือหน้าโหลดค้างนาน)
+  //   tile เป็นไฟล์สำเร็จรูปบน CDN (ราว 0.05 วินาที/ไฟล์) และเป็นชุดเดียวกับที่แผนที่ 3 มิติโหลดอยู่แล้ว ภาพจึงตรงกันด้วย
+  //   ext = [xmin, ymin, xmax, ymax] (เมตร, Web Mercator) ได้ URL ของภาพ (blob) กลับมา; ภาพเดียวกันขอซ้ำได้ ไม่ต่อใหม่
+  const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
+  const WORLD = 2 * Math.PI * R;
+  const tileJobs = new Map();
+  const tileImage = (ext, w, h) => {
+    const key = [...ext.map((n) => n.toFixed(1)), w, h].join(",");
+    if (!tileJobs.has(key)) tileJobs.set(key, stitchTiles(ext, w, h).catch(() => ""));
+    return tileJobs.get(key);
+  };
+  async function stitchTiles(ext, w, h) {
+    // ซูมที่ tile ละเอียดพอสำหรับขนาดภาพ (ไม่เกินจำนวน tile ที่ต้องโหลดมากเกินไป)
+    const mpp = (ext[2] - ext[0]) / w;
+    let z = Math.max(0, Math.min(19, Math.ceil(Math.log2(WORLD / (256 * mpp)))));
+    const range = (zz) => {
+      const span = WORLD / 2 ** zz;
+      const col = (x) => Math.floor((x + WORLD / 2) / span), row = (y) => Math.floor((WORLD / 2 - y) / span);
+      return { span, x0: col(ext[0]), x1: col(ext[2] - 1e-6), y0: row(ext[3]), y1: row(ext[1] + 1e-6) };
+    };
+    let r = range(z);
+    while (z > 0 && (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) > 90) r = range(--z);
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const g = c.getContext("2d");
+    g.imageSmoothingQuality = "high";
+    const sx = w / (ext[2] - ext[0]), sy = h / (ext[3] - ext[1]);   // จุดต่อเมตร
+    const jobs = [];
+    for (let ty = r.y0; ty <= r.y1; ty++)
+      for (let tx = r.x0; tx <= r.x1; tx++)
+        jobs.push(new Promise((done) => {
+          const im = new Image();
+          im.crossOrigin = "anonymous";   // Esri ส่ง CORS มา จึงวาดลง canvas แล้วส่งออกเป็นภาพได้
+          im.onload = () => {
+            // ปัดขอบเป็นจุดเต็ม + เกินกันนิดหนึ่ง ไม่ให้เห็นรอยต่อระหว่าง tile
+            const l = Math.floor((tx * r.span - WORLD / 2 - ext[0]) * sx), t0 = Math.floor((ext[3] - (WORLD / 2 - ty * r.span)) * sy);
+            const rr = Math.ceil(((tx + 1) * r.span - WORLD / 2 - ext[0]) * sx), b = Math.ceil((ext[3] - (WORLD / 2 - (ty + 1) * r.span)) * sy);
+            g.drawImage(im, l, t0, rr - l + 1, b - t0 + 1);
+            done();
+          };
+          im.onerror = done;
+          im.src = `${TILE_URL}${z}/${ty}/${tx}`;
+        }));
+    await Promise.all(jobs);
+    const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.86));
+    return blob ? URL.createObjectURL(blob) : "";
+  }
   function staticView(geojson, w, h, pad = 1.25) {
     const [[a, b], [c, d]] = RN.bboxOf(geojson);
     const [x0, y0] = merc([a, b]);
@@ -856,13 +916,13 @@ RN.ready.then(() => {
     let hw = Math.max(((x1 - x0) / 2) * pad, 60), hh = Math.max(((y1 - y0) / 2) * pad, 60);
     if (hw / hh > w / h) hh = (hw * h) / w; else hw = (hh * w) / h;
     const ext = [cx - hw, cy - hh, cx + hw, cy + hh];
-    const url = exportUrl(ext, w, h);
+    const image = () => tileImage(ext, w, h);   // สร้างภาพตอนเรียกครั้งแรก (Promise ของ URL)
     const project = (pt) => {
       const [x, y] = merc(pt);
       return [((x - ext[0]) / (ext[2] - ext[0])) * w, ((ext[3] - y) / (ext[3] - ext[1])) * h];
     };
     const unmerc = ([x, y]) => [(x / R) * (180 / Math.PI), (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI)];
-    return { url, project, ext, center: unmerc([cx, cy]) };
+    return { image, project, ext, center: unmerc([cx, cy]) };
   }
   // ภาพดาวเทียมในกรอบของบล็อก "ยินดีต้อนรับ" (แผนที่ฉากเปิดแพนกล้องลงมาจบที่ภาพนี้)
   const miniView = (data) => staticView(data.area.geojson, 1200, 760, 1.15);
@@ -891,13 +951,19 @@ RN.ready.then(() => {
 
   function miniMap(data) {
     const W = 1200, H = 760;
-    const { url, project } = miniView(data);
+    const { image, project } = miniView(data);
     const box = document.getElementById("mini-map");
-    // ภาพในกรอบต้องพร้อมก่อนแผนที่ฉากเปิดย่อลงมาส่งต่อ: โหลดทันที (ไม่รอเลื่อนใกล้) หน้าโหลดรอจนถอดรหัสเสร็จ
-    const pic = img(url, t("home.welcome_map_alt"), "mini-sat");
-    pic.loading = "eager";
+    // ภาพในกรอบต้องพร้อมก่อนแผนที่ฉากเปิดย่อลงมาส่งต่อ: สร้างทันที (ไม่รอเลื่อนใกล้) หน้าโหลดรอจนถอดรหัสเสร็จ
+    const pic = el("img", "mini-sat");
+    pic.alt = t("home.welcome_map_alt");
     box.append(pic);
-    decoded(pic).then(() => boot.done("mini"));
+    image().then(async (url) => {
+      if (url) {
+        pic.src = url;
+        await decoded(pic);
+      }
+      boot.done("mini");
+    });
     box.append(svgLayer(W, H, [
       [svgPath(data.area.geojson, project), "mm-area"],
       ...data.plots.map((p, i) => [svgPath(p.geojson, project), "mm-plot", landUseColor(p.landUse), i]),
@@ -909,7 +975,7 @@ RN.ready.then(() => {
     new IntersectionObserver(([e], o) => {
       if (!e.isIntersecting) return;
       o.disconnect();
-      ctaBox.style.backgroundImage = `url("${cta.url}")`;
+      cta.image().then((url) => url && (ctaBox.style.backgroundImage = `url("${url}")`));
     }, { rootMargin: "150% 0px" }).observe(ctaBox);
   }
 
@@ -1034,7 +1100,7 @@ RN.ready.then(() => {
   // การ์ดละแปลง: รูปโปรไฟล์ผู้ดูแล + รูปที่ส่งมาล่าสุด 3 รูป (ตาราง 2 x 2) ชื่อผู้ดูแลใต้ภาพ กดแล้วเปิดแปลงนั้นบนแผนที่
   //   รูปไม่ถึง 3: ช่องถัดไปเป็นภาพดาวเทียมของแปลง ที่เหลือเป็นช่องสีตามการใช้ที่ดิน
   // วนไม่รู้จบ: ชุดการ์ดซ้ำจนกว้างกว่าจอ แล้วต่อสองชุดเหมือนกัน CSS เลื่อนไปครึ่งหนึ่งแล้ววนกลับ (เบราว์เซอร์เลื่อนให้เอง ไม่ใช้ JS ทุกเฟรม)
-  const GALLERY_MAX = 14, GALLERY_SPEED = 36;   // แปลงสูงสุดกี่แปลง, ความเร็ววิ่ง (px ต่อวินาที)
+  const GALLERY_MAX = 14, GALLERY_SPEED = 36, GALLERY_IMG_DELAY = 2500;   // แปลงสูงสุดกี่แปลง, ความเร็ววิ่ง (px ต่อวินาที), เริ่มโหลดรูปในการ์ดหลังหน้าโหลดหาย (ms)
   // การ์ดลอยลงที่ปุ๊บ (FLY_MS หลังเริ่มลอยเข้า ตอนการ์ดเกือบเข้าที่) แถววิ่งพรวดเร็วมากทันที: เร่งถึง BURST_PEAK เท่าใน BURST_UP ms
   //   แล้วค่อย ๆ ผ่อนกลับความเร็วปกติใน BURST_DOWN ms (เหมือนล้อที่ถูกปั่นแรง ๆ แล้วค่อยหยุด)
   const FLY_MS = 380, BURST_PEAK = 110, BURST_UP = 160, BURST_DOWN = 1800;
@@ -1047,6 +1113,34 @@ RN.ready.then(() => {
     const section = document.getElementById("plots-gallery");
     const view = document.getElementById("pg-view"), track = document.getElementById("pg-track");
     section.hidden = false;
+
+    // รูปในการ์ด (รูปชาวบ้าน รูปโปรไฟล์ ภาพดาวเทียม) ยังไม่โหลดตอนหน้าโหลด: รวมกันหลาย MB แย่งเน็ตกับแผนที่ฉากเปิดที่หน้าโหลดรออยู่
+    //   (มือถือหน้าโหลดค้างนานขึ้นมาก) ปล่อยโหลดหลังหน้าโหลดหายไป GALLERY_IMG_DELAY ms หรือตอนเลื่อนเข้าใกล้บล็อกนี้ แล้วแต่อะไรถึงก่อน
+    //   src = URL ของรูป หรือฟังก์ชันที่ได้ URL มาทีหลัง (ภาพดาวเทียมที่ต้องต่อ tile ก่อน)
+    let imgsOpen = false;
+    const loaders = new WeakMap();
+    const load = (im) => {
+      const get = loaders.get(im);
+      if (!get) return;
+      loaders.delete(im);
+      Promise.resolve(get()).then((url) => url && (im.src = url));
+    };
+    const pic = (src, alt, cls) => {
+      const im = el("img", cls);
+      im.alt = alt || "";
+      im.decoding = "async";
+      loaders.set(im, typeof src === "function" ? src : () => src);
+      if (imgsOpen) load(im);
+      return im;
+    };
+    const openImgs = () => {
+      if (imgsOpen) return;
+      imgsOpen = true;
+      track.querySelectorAll("img").forEach(load);
+    };
+    heroReady.promise.then(() => setTimeout(openImgs, GALLERY_IMG_DELAY));
+    const near = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && (near.disconnect(), openImgs()), { rootMargin: "250% 0px" });
+    near.observe(section);
 
     const card = (p, copy, i) => {
       const a = el("a", "pg-card");
@@ -1062,13 +1156,13 @@ RN.ready.then(() => {
       }
       const grid = el("span", "pg-grid");
       const who = p.villagers[0];
-      grid.append(who ? avatarEl(who, "pg-face") : el("span", "pg-face", RN.landUseIcon(p.landUse)));
-      p.photos.slice(0, 3).forEach((ph) => grid.append(img(ph.image_url, ph.caption || plotTitle(p))));
+      grid.append(who?.avatar_url ? pic(who.avatar_url, "", "pg-face") : who ? avatarEl(who, "pg-face") : el("span", "pg-face", RN.landUseIcon(p.landUse)));
+      p.photos.slice(0, 3).forEach((ph) => grid.append(pic(ph.image_url, ph.caption || plotTitle(p))));
       if (grid.children.length < 4) {
         const W = 400, H = 400;
         const v = staticView(p.geojson, W, H, 2.4);
         const sat = el("span", "pg-sat");
-        sat.append(img(v.url, t("home.slider_satellite_alt", { plot: plotTitle(p) })), svgLayer(W, H, [[svgPath(p.geojson, v.project), "pg-outline", landUseColor(p.landUse)]]));
+        sat.append(pic(v.image, t("home.slider_satellite_alt", { plot: plotTitle(p) })), svgLayer(W, H, [[svgPath(p.geojson, v.project), "pg-outline", landUseColor(p.landUse)]]));
         grid.append(sat);
       }
       while (grid.children.length < 4) grid.append(el("span", "pg-blank"));
@@ -1192,6 +1286,8 @@ RN.ready.then(() => {
       },
       done(name) {
         if (!left.delete(name)) return;
+        // เปิดหน้าด้วย ?debug: ดูใน console ว่าหน้าโหลดรออะไรเสร็จตอนไหน (ไว้หาว่าอะไรช้าบนมือถือ)
+        if (/[?&]debug\b/.test(location.search)) console.log(`[boot] ${name} ${Math.round(performance.now())}ms`);
         if (bar) bar.style.transform = `scaleX(${Math.max(0.04, 1 - left.size / all.length)})`;
         if (!left.size) setTimeout(api.open, 300);   // ให้เห็นแถบเต็มแป๊บหนึ่ง
       },

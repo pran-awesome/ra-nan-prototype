@@ -215,6 +215,16 @@
     return [(a + c) / 2, (b + d) / 2];
   };
 
+  // iPhone/iPad (Safari และทุกเบราว์เซอร์บน iOS ที่ใช้ WebKit): แผนที่วาดตอนโหลดแค่ 2-3 เฟรมแล้วหยุดนิ่ง
+  //   บ่อยครั้งภาพที่วาดไว้หายไป เหลือจอสีพื้นเปล่า ๆ (หมุดยังอยู่) จนกว่าจะแตะแผนที่ให้วาดใหม่
+  //   จึงสั่งวาดซ้ำอีกสองสามครั้งหลังโหลดเสร็จ และทุกครั้งที่กลับมาที่หน้านี้ (สลับแอป/แท็บ, ย้อนกลับ)
+  function keepPainted(map) {
+    const repaint = () => [0, 250, 1000].forEach((ms) => setTimeout(() => map.triggerRepaint(), ms));
+    map.once("idle", repaint);
+    addEventListener("pageshow", repaint);
+    document.addEventListener("visibilitychange", () => document.hidden || repaint());
+  }
+
   // ภาพดาวเทียม Esri + ความสูงภูมิประเทศ (AWS Terrain Tiles, ไม่ต้องใช้ key) สำหรับมุมมอง 3 มิติ
   function mapStyle({ terrain = false } = {}) {
     const style = {
@@ -401,7 +411,7 @@
 
   window.RN = {
     ready, t, applyText, cfg, LAND_USE, landUseColor, landUseIcon, loadAll, el, img, avatarEl, facesEl, displayName,
-    formatDate, formatDay, timeAgo, formatNum, plotTitle, peopleLabel, bboxOf, centerOf, mapStyle,
+    formatDate, formatDay, timeAgo, formatNum, plotTitle, peopleLabel, bboxOf, centerOf, mapStyle, keepPainted,
     renderNav, link, openLightbox, storyCard, showError,
   };
 })();
