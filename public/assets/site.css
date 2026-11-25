@@ -396,7 +396,13 @@ html:not(.is-loading) .boot { opacity: 0; visibility: hidden; pointer-events: no
    ระหว่างเลื่อนผ่าน .land-tail พื้นหลังแผนที่ค่อย ๆ กลายเป็นสีขาว (--wash 0-1 จาก home.js) พร้อมกันนั้นข้อความอื่น (.land-fade) จางหาย (--out)
    คำใหญ่ "นา สวน ไร่ / บ่อปลา & ป่า" เริ่มขยายทันที (--grow) แล้วบรรทัดบนเลื่อนออกซ้าย บรรทัดล่างออกขวา (transform จาก home.js)
    พ้น .land-tail แล้วบล็อกถัดไปที่พื้นขาวเหมือนกันเลื่อนขึ้นมา จึงต่อกันเนียน */
-.land-stage::after { content: ""; position: absolute; inset: 0; background: var(--land-wash); opacity: var(--wash, 0); }
+.land-stage::after { content: ""; position: absolute; inset: 0; background: var(--land-wash); opacity: var(--wash, 0); will-change: opacity; }
+/* พื้นของบล็อกเอง (อยู่ใต้ภาพ .land-stage) เปลี่ยนสีตาม --wash เหมือนชั้นภาพ: มือถือเลื่อนย้อนขึ้นเร็ว ๆ ชั้นภาพวาดไม่ทันจะเห็นพื้นนี้แวบหนึ่ง
+   ถ้าพื้นยังเข้มอยู่ตอนท้ายบล็อกที่ขาวแล้วจะเห็นเป็นแถบดำ (ระหว่างฉากเปิด พื้นใสให้เห็น #land-bg ข้างหลัง) */
+@supports (background-color: color-mix(in srgb, red, blue)) {
+  .land { background-color: color-mix(in srgb, var(--land-wash) calc(var(--wash, 0) * 100%), #1e2a1f); }
+  .hero-fx .welcome-hold.to-land ~ .land { background-color: color-mix(in srgb, var(--land-wash) calc(var(--wash, 0) * 100%), transparent); }
+}
 .land-tail { height: 100vh; height: 100svh; }
 .land-fade { opacity: calc(1 - var(--out, 0)); }
 .land-body { position: relative; padding: clamp(80px, 11vw, 150px) 0 0; }
@@ -456,6 +462,8 @@ html:not(.is-loading) .boot { opacity: 0; visibility: hidden; pointer-events: no
 .pg-view.pause .pg-track, .pg-track:has(:focus-visible), .pg-view.off .pg-track { animation-play-state: paused; }
 .plots-gallery.show .pg-view.intro .pg-track { animation-play-state: running; }
 .pg-view.intro .pg-card { pointer-events: none; }
+/* ระหว่างวิ่งพรวด home.js เล่นตำแหน่งที่คิดไว้ก่อนแทน animation วิ่งปกติ */
+.pg-view.burst .pg-track { animation: none; }
 @keyframes pg-run { to { transform: translateX(-50%); } }
 /* ลดการเคลื่อนไหว: ไม่วิ่ง เลื่อนแนวนอนเอง */
 .pg-view.still { overflow-x: auto; scrollbar-width: none; padding-inline: var(--gutter); }

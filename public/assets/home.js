@@ -1103,7 +1103,8 @@ RN.ready.then(() => {
   const GALLERY_MAX = 14, GALLERY_SPEED = 36, GALLERY_IMG_DELAY = 2500;   // แปลงสูงสุดกี่แปลง, ความเร็ววิ่ง (px ต่อวินาที), เริ่มโหลดรูปในการ์ดหลังหน้าโหลดหาย (ms)
   // การ์ดลอยลงที่ปุ๊บ (FLY_MS หลังเริ่มลอยเข้า ตอนการ์ดเกือบเข้าที่) แถววิ่งพรวดเร็วมากทันที: เร่งถึง BURST_PEAK เท่าใน BURST_UP ms
   //   แล้วค่อย ๆ ผ่อนกลับความเร็วปกติใน BURST_DOWN ms (เหมือนล้อที่ถูกปั่นแรง ๆ แล้วค่อยหยุด)
-  const FLY_MS = 380, BURST_PEAK = 110, BURST_UP = 160, BURST_DOWN = 1800;
+  //   BURST_PEAK ใช้กับการ์ดกว้าง BURST_CARD px ขึ้นไป การ์ดเล็กกว่านั้น (จอแคบ) ลดลงตามส่วน
+  const FLY_MS = 380, BURST_PEAK = 110, BURST_UP = 160, BURST_DOWN = 1800, BURST_CARD = 300, BURST_FRAME = 1000 / 60;
   function plotsGallery(data) {
     const plots = data.plots
       .filter((p) => p.photos.length || p.villagers.length)
@@ -1205,55 +1206,100 @@ RN.ready.then(() => {
     document.fonts?.ready.then(place);
     addEventListener("resize", () => {
       clearTimeout(rt);
-      rt = setTimeout(() => (build(), place()), 250);
+      rt = setTimeout(() => {
+        // จอกว้างเปลี่ยน แถวสร้างใหม่: เลิกพรวดที่คิดไว้กับแถวเดิม
+        if ((document.documentElement.clientWidth || innerWidth) !== builtFor) stopBurst();
+        build();
+        place();
+      }, 250);
     });
     // พ้นจอแล้วหยุดวิ่ง (ไม่เปลืองเครื่อง)
     new IntersectionObserver(([e]) => view.classList.toggle("off", !e.isIntersecting)).observe(view);
 
-    // วิ่งพรวด: ปรับความเร็วของ animation วิ่ง (pg-run ใน site.css) ทีละเฟรม ตำแหน่งต่อเนื่อง ไม่กระโดด
-    let burstWait = 0, burstRaf = 0;
+    // วิ่งพรวด: คิดตำแหน่งแถวตลอดช่วงพรวดไว้ก่อนเป็น animation เดียว (track.animate) เบราว์เซอร์เล่นเองบนการ์ดจอ ไม่ต้องสั่งทุกเฟรม
+    //   (เดิมเปลี่ยนความเร็วทีละเฟรม มือถือโดยเฉพาะ Safari ตามไม่ทัน แถวสั่น)
+    //   ระหว่างพรวดปิด animation วิ่งปกติ (.burst) จบแล้วเปิดคืนโดยตั้งเวลาให้อยู่ตำแหน่งที่พรวดไปถึงพอดี (ต่อกันเนียน ไม่กระโดด)
+    let burstWait = 0, burstAnim = null, burstAt = null;
     const runAnim = () => track.getAnimations?.().find((a) => a.animationName === "pg-run");
-    const setRate = (a, r) => (a.updatePlaybackRate ? a.updatePlaybackRate(r) : (a.playbackRate = r));
     // .intro: ช่วงลอยเข้า + วิ่งพรวด ห้ามหยุด (ชี้เมาส์/กดก็ไม่หยุด) จบแล้วค่อยกลับมาหยุดได้ตามปกติ
     const intro = (on) => {
       view.classList.toggle("intro", on);
       if (on) view.classList.remove("pause");
     };
+    // ความเร็ว (กี่เท่าของปกติ) ที่ e ms หลังเริ่มพรวด
+    const rateAt = (e, peak) => e < BURST_UP
+      ? lerp(1, peak, ease(e / BURST_UP))
+      : lerp(peak, 1, 1 - Math.pow(1 - Math.min(1, (e - BURST_UP) / BURST_DOWN), 3));
+    // เอาตัวพรวดออก เปิด animation วิ่งปกติคืนที่เวลา runTime (ms) ในเฟรมเดียวกัน
+    const endBurst = (runTime) => {
+      const a = burstAnim;
+      burstAnim = burstAt = null;
+      view.classList.remove("burst");
+      const run = runAnim();   // อ่านแล้วเบราว์เซอร์สร้าง animation วิ่งใหม่ทันที (ยังไม่วาด)
+      const dur = run && Number(run.effect.getComputedTiming().duration);
+      if (run && dur > 0) run.currentTime = ((runTime % dur) + dur) % dur;
+      a?.cancel();
+    };
     const stopBurst = () => {
       clearTimeout(burstWait);
-      cancelAnimationFrame(burstRaf);
+      if (burstAnim) endBurst(burstAt(burstAnim.currentTime || 0));
       intro(false);
-      const a = runAnim();
-      if (a) setRate(a, 1);
     };
     const burst = () => {
-      const a = runAnim();
-      if (!a) return intro(false);
-      const t0 = performance.now();
-      const step = (now) => {
-        const e = now - t0;
-        if (e >= BURST_UP + BURST_DOWN) {
-          intro(false);
-          return setRate(a, 1);
-        }
-        const r = e < BURST_UP
-          ? lerp(1, BURST_PEAK, ease(e / BURST_UP))
-          : lerp(BURST_PEAK, 1, 1 - Math.pow(1 - (e - BURST_UP) / BURST_DOWN, 3));
-        setRate(a, r);
-        burstRaf = requestAnimationFrame(step);
+      const run = runAnim();
+      const dur = run && Number(run.effect.getComputedTiming().duration);
+      if (!run || !(dur > 0) || !track.animate) return intro(false);
+      const P = track.getBoundingClientRect().width / 2;   // ระยะหนึ่งรอบ (pg-run เลื่อนไป -50%)
+      // จอแคบ การ์ดเล็ก: ลดความเร็วสูงสุดตามขนาดการ์ด ไม่งั้นการ์ดผ่านจอเร็วจนดูกระตุก (จอกว้างการ์ดเต็มขนาด เท่าเดิม)
+      const cardW = track.firstElementChild?.getBoundingClientRect().width || BURST_CARD;
+      const peak = 1 + (BURST_PEAK - 1) * Math.min(1, cardW / BURST_CARD);
+      const T = BURST_UP + BURST_DOWN, c0 = run.currentTime || 0;
+      // d[i]: เวลาวิ่งปกติที่พรวดไปได้ถึงเฟรมที่ i (ms) ทุก ๆ BURST_FRAME ms
+      const d = [0];
+      for (let i = 1, acc = 0, e = 0; e < T; i++) {
+        const to = Math.min(T, i * BURST_FRAME);
+        for (const h = (to - e) / 8; e < to - 1e-9; e += h) acc += (h * (rateAt(e, peak) + rateAt(e + h, peak))) / 2;
+        e = to;
+        d.push(acc);
+      }
+      const n = d.length - 1;
+      const runAt = (k) => c0 + d[k];
+      burstAt = (e) => {
+        const k = Math.min(n, Math.max(0, e / BURST_FRAME)), i = Math.min(n - 1, Math.floor(k));
+        return c0 + lerp(d[i], d[i + 1], k - i);
       };
-      burstRaf = requestAnimationFrame(step);
+      // keyframe ทุกเฟรม ตำแหน่ง = ส่วนเศษของรอบ x P; ตรงที่ครบรอบใส่ -P กับ 0 ชิดกัน (หน้าตาเหมือนกัน วนต่อได้ไม่เห็นรอย)
+      const at = (k) => Math.min(1, (k * BURST_FRAME) / T);
+      const loops = (k) => runAt(k) / dur;
+      const tx = (px) => ({ transform: `translateX(${(-px).toFixed(2)}px)` });
+      const frames = [{ offset: 0, ...tx((loops(0) % 1) * P) }];
+      for (let k = 1; k <= n; k++) {
+        const ua = loops(k - 1), ub = loops(k);
+        if (Math.floor(ub) > Math.floor(ua)) {
+          const o = lerp(at(k - 1), at(k), (Math.floor(ub) - ua) / (ub - ua));
+          frames.push({ offset: o, ...tx(P) }, { offset: Math.min(at(k), o + 1e-6), ...tx(0) });
+        }
+        frames.push({ offset: at(k), ...tx((ub % 1) * P) });
+      }
+      view.classList.add("burst");
+      const a = (burstAnim = track.animate(frames, { duration: T, easing: "linear", fill: "forwards" }));
+      a.startTime = document.timeline.currentTime;
+      a.onfinish = () => {
+        if (burstAnim !== a) return;
+        endBurst(runAt(n));
+        intro(false);
+      };
+    };
+    const startBurst = () => {
+      stopBurst();
+      intro(true);
+      burstWait = setTimeout(burst, FLY_MS);
     };
     if (!reduceMotion) {
-      const start = () => {
-        stopBurst();
-        intro(true);
-        burstWait = setTimeout(burst, FLY_MS);
-      };
-      section.addEventListener("pg-show", start);
+      section.addEventListener("pg-show", startBurst);
       section.addEventListener("pg-hide", stopBurst);
       // เปิดหน้ามาเลยจุดนั้นแล้ว (กลับมาหน้านี้ที่ตำแหน่งเดิม): การ์ดขึ้นอยู่ก่อนแล้ว เร่งให้ดูหนึ่งครั้ง
-      if (section.classList.contains("show")) start();
+      if (section.classList.contains("show")) startBurst();
     }
     // หยุดเมื่อขยับเมาส์เข้ามาชี้เองเท่านั้น: เมาส์ที่วางค้างอยู่ก่อนแล้วการ์ดเลื่อนมาอยู่ใต้มัน (movement = 0) ไม่นับ
     //   จอสัมผัสไม่หยุด (แตะ = เปิดแปลง) / ช่วง .intro ไม่หยุด
