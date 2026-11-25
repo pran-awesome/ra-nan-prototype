@@ -50,6 +50,9 @@ RN.ready.then(() => {
   // ฉากเปิด: แผนที่ 3 มิติหมุนช้า ๆ รอบหมู่บ้าน
   const HERO = { zoom: 13.6, pitch: 60, bearing: -20 };   // ห่างพอเห็นหมู่บ้านทั้งหมดกับภูเขารอบ ๆ
   const SPIN = 0.003;                                      // ความเร็วหมุน (องศาต่อมิลลิวินาที)
+  // แผนที่ฉากเปิดวาดใหม่ไม่เกินกี่ครั้งต่อวินาที: วาดแผนที่ 3 มิติคืองานหนักที่สุดของหน้า (มือถือหน่วงเพราะอันนี้)
+  //   หมุนช้ามาก 30 ครั้งต่อวินาทีตาแยกไม่ออกจาก 60 แต่งานวาดลดครึ่งหนึ่ง ส่วนที่ผูกกับการเลื่อน (ย่อ/ขยับกรอบ) ยังขยับทุกเฟรม
+  const MAP_FPS = 30;
   const TERRAIN = 1.6;                                     // ความสูงภูเขา (เท่าของจริง)
   // จอกว้าง: กรอบเลื่อนไปชิดซ้ายพร้อมย่อลงเล็กน้อย ข้อความอยู่คอลัมน์ขวา กึ่งกลางแนวตั้งเท่ากรอบ
   const SIDE_GAP = 56, SIDE_FRAME = 0.56;   // ช่องไฟ (px), กรอบกว้างสุดกี่ส่วนของความกว้างเนื้อหา
@@ -359,9 +362,9 @@ RN.ready.then(() => {
       interactive: false,
       attributionControl: false,
       fadeDuration: 0,
-      // ความละเอียดที่วาด: จอคอม/แท็บเล็ตไม่เกิน 2 เท่า, มือถือ 1.5 เท่า (แผนที่ 3 มิติหมุนตลอด อยู่ใต้ม่านเงา
-      //   ตาแทบแยกไม่ออก แต่จำนวนจุดที่ต้องวาดทุกเฟรมลดลงเกือบครึ่ง เครื่องไม่ร้อน ลื่นขึ้นมาก)
-      pixelRatio: Math.min(devicePixelRatio || 1, matchMedia("(pointer: coarse) and (max-width: 820px)").matches ? 1.5 : 2),
+      // ความละเอียดที่วาด: จอคอม/แท็บเล็ตไม่เกิน 2 เท่า, มือถือ 1.25 เท่า (แผนที่ 3 มิติหมุนตลอด อยู่ใต้ม่านเงา
+      //   ตาแทบแยกไม่ออก แต่จำนวนจุดที่ต้องวาดทุกเฟรมเหลือไม่ถึงครึ่งของจอ 2 เท่า เครื่องไม่ร้อน ลื่นขึ้นมาก)
+      pixelRatio: Math.min(devicePixelRatio || 1, matchMedia("(pointer: coarse) and (max-width: 820px)").matches ? 1.25 : 2),
     });
     RN.keepPainted(map);   // ลดการเคลื่อนไหว (แผนที่นิ่ง) / กลับมาจากแอปอื่น: กันภาพหายบน iPhone
     const mapLoad = new Promise((r) => map.once("load", r));
@@ -525,6 +528,13 @@ RN.ready.then(() => {
     // ชื่อหมู่บ้านตัวใหญ่ไม่จาง เลื่อนขึ้นไปพร้อมหน้า ส่วนปุ่มสำรวจ/พิกัด/ภาพบนแผนที่จางออกเร็ว ๆ
     const fade = [".hero-explore", ".hero-coord"].map((q) => hero.querySelector(q)).concat(pins.box);
     let last = performance.now(), spin = HERO.bearing, prevY = scrollY, movedAt = 0, calmAt = null;
+    // ถึงรอบวาดแผนที่หรือยัง (MAP_FPS) force: วาดเลย (กล้องเพิ่งถึงต้นทาง/ปลายทาง ต้องตรงเป๊ะ)
+    let drawnAt = -1e9, camAt = -1;
+    const mapDue = (now, force) => {
+      if (!force && now - drawnAt < 1000 / MAP_FPS - 4) return false;
+      drawnAt = now;
+      return true;
+    };
     // จอสัมผัส: รู้ว่านิ้วยังแตะจออยู่ไหม (ดูตอนเปลี่ยนเป็นหน้าธรรมดาใน frame)
     const touchy = matchMedia("(pointer: coarse)").matches;
     let touching = false;
@@ -681,7 +691,10 @@ RN.ready.then(() => {
       if (calm) {
         if (side) slide(Infinity);
         // หมุนแผนที่ฉากเปิดเฉพาะตอนมองเห็น
-        if (y < vh && !document.hidden) map.setBearing((spin += dt * SPIN));
+        if (y < vh && !document.hidden) {
+          spin += dt * SPIN;
+          if (mapDue(now)) map.setBearing(spin);
+        }
         return requestAnimationFrame(frame);
       }
       // อ่านตำแหน่งทั้งหมดก่อน แล้วค่อยเขียนสไตล์ทีหลัง (ไม่สลับอ่าน-เขียน เบราว์เซอร์จะได้ไม่ต้องคำนวณเลย์เอาต์ซ้ำกลางเฟรม)
@@ -743,7 +756,10 @@ RN.ready.then(() => {
         if (!warming || boot.opened) {
           if (!document.hidden) spin += dt * SPIN * (1 - cam);
           if (cam === 0) spin = ((spin + 540) % 360) - 180;
-          moveCam(cam);
+          if (mapDue(now, cam !== camAt && (cam === 0 || cam === 1))) {
+            camAt = cam;
+            moveCam(cam);
+          }
         }
         const sc = lerp(1, s, p);
         const cw = lerp(W, fw / s, p), ch = lerp(H, fh / s, p);

@@ -532,6 +532,19 @@ html:not(.is-loading) .boot { opacity: 0; visibility: hidden; pointer-events: no
 .footer-simple .footer-grid { grid-template-columns: 1fr auto; align-items: end; }
 @media (max-width: 760px) { .footer-grid { grid-template-columns: 1fr; } }
 
+/* ---------------- หน้า /embed-map (embed-map.html): แผนที่หมุนเต็มจอ ไม่มีเมนู ---------------- */
+.page-embed { background: #1e2a1f; overflow: hidden; }
+.embed-map { position: fixed; inset: 0; background: #1e2a1f; opacity: 0; transition: opacity 1.2s ease; }
+.embed-map.ready { opacity: 1; }
+.embed-map .maplibregl-canvas { outline: none; }
+/* การ์ดรูปย่อตามขนาดกรอบ (ฝังในกรอบเตี้ย ๆ ก็ยังวางการ์ดได้) */
+.page-embed .hero-pins { --hp-w: clamp(72px, min(22vw, 26vh), 132px); }
+.embed-credit {
+  position: fixed; right: 10px; bottom: 8px; z-index: 2; margin: 0; max-width: calc(100% - 20px); pointer-events: none;
+  font-size: 10.5px; line-height: 1.4; color: rgba(255, 255, 255, .78); text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* ---------------- Lightbox ---------------- */
 .lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(20, 20, 18, .94); display: grid; grid-template-rows: 1fr auto; animation: fade .25s ease; }
 @supports (backdrop-filter: blur(1px)) { .lightbox { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } }

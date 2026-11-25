@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th" class="t-loading">
+<!--
+  หน้า /embed-map: แผนที่ 3 มิติหมุนรอบหมู่บ้าน + รูปจากชาวบ้านสุ่มขึ้นทีละรูป แบบเดียวกับฉากเปิดหน้าแรก
+  ไม่มีเมนู ไม่มีลิงก์จากหน้าอื่น (เปิดตรง ๆ ที่ /embed-map) ไว้ฝังในเว็บอื่นหรือเปิดค้างไว้บนจอ:
+    <iframe src="https://ra-nan-web.pranpan-som.workers.dev/embed-map" width="100%" height="600" style="border:0" loading="lazy" title="แผนที่บ้านสบปืน"></iframe>
+  รูปที่ชาวบ้านเพิ่งส่งมาขึ้นเองโดยไม่ต้องรีเฟรชหน้า (assets/embed-map.js ดึงข้อมูลใหม่เป็นระยะ)
+  ข้อความบนหน้านี้แก้ที่ content/text.txt หมวด [embed] (ดูกฎในหัวไฟล์ index.html)
+-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>บ้านสบปืน · แผนที่หมู่บ้าน</title>
+  <!-- หน้าสำหรับฝัง ไม่ต้องขึ้นในผลค้นหา -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#1e2a1f">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+  <link rel="preconnect" href="https://s3.amazonaws.com" crossorigin>
+  <link rel="preconnect" href="https://lwcjdfjycaoypcrieggj.supabase.co" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="page-embed">
+  <div class="embed-map" id="embed-map" role="img" aria-label="แผนที่ 3 มิติของหมู่บ้าน หมุนช้า ๆ พร้อมรูปที่ชาวบ้านส่งมา" data-t-aria-label="embed.map_aria"></div>
+  <!-- เครดิตภาพดาวเทียม/ข้อมูลความสูง (ต้องแสดงตามเงื่อนไขผู้ให้บริการ) ข้อความจาก site.credits -->
+  <p class="embed-credit" id="embed-credit">ภาพดาวเทียม © Esri, Maxar, Earthstar Geographics · ข้อมูลความสูง © Mapzen/AWS</p>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="config.js"></script>
+  <script src="assets/core.js"></script>
+  <script src="assets/embed-map.js"></script>
+</body>
+</html>
